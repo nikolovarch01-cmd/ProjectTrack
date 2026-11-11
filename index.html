@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111160235">
+<meta name="pt-build" content="20261111160349">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -140,7 +140,7 @@ table.st td.mono{white-space:nowrap}
 .ed input,.ed select,.ed textarea{background:var(--surface)}
 .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 @media (max-width:760px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:420px){.grid4{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.pcard .check{grid-column:1/-2}}
 .check{display:flex;gap:6px;align-items:center;font-size:13px}
 .check input{width:auto}
 .plots{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -1072,8 +1072,8 @@ function editor(id,p,today){
   if(gopen===id){h+=`<div class="gset">
   <div class="grid4">
     <label class="f">Клиент<input type="text" id="cl-${esc(id)}" data-f="client" value="${esc(p.client)}"${ro}></label>
-    <label class="f">Телефон на клиента<input type="tel" id="ct-${esc(id)}" data-f="phone" value="${esc(p.phone)}"${ro}></label>
-    <label class="f">Идентификатор (напр. 71/76 Приселци)<input type="text" id="id-${esc(id)}" data-f="ident" value="${esc(p.ident)}"${ro}></label>
+    <label class="f">Телефон<input type="tel" id="ct-${esc(id)}" data-f="phone" value="${esc(p.phone)}"${ro}></label>
+    <label class="f">Идентификатор<input type="text" id="id-${esc(id)}" data-f="ident" value="${esc(p.ident)}" placeholder="71/76 Приселци"${ro}></label>
     <label class="f">Село / адрес<input type="text" id="ad-${esc(id)}" data-f="address" value="${esc(p.address)}"${ro}></label>
     <label class="f">Община<input type="text" id="mu-${esc(id)}" data-f="municipality" list="munis" value="${esc(p.municipality)}"${ro}></label>
   </div>

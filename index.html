@@ -329,8 +329,8 @@ const OLD_NAMES={rosv:"РОСВ — скица и ситуация (копия, 
 /* documents per plot: do we have it, and where is it now (his ask, 2026-11-10) */
 /* the project's own papers, on top of the opened project (his ask 2026-11-11: „нотариален акт, пуп, скица/виза,
    пълномощно ... някви други ей такив работи") - one per project, not per plot */
-const COMMON=["Нотариален акт","Скица от кадастъра","Виза за проектиране","ПУП","Пълномощно"];
-const MOVED_TO_COMMON={"Нотариален акт":"Нотариален акт","Скица (на името на собственика)":"Скица от кадастъра","Виза за проектиране":"Виза за проектиране","Пълномощно от собственика":"Пълномощно"};
+const COMMON=["Нотариален акт","Скица-виза","ПУП","Пълномощно"];
+const MOVED_TO_COMMON={"Нотариален акт":"Нотариален акт","Скица (на името на собственика)":"Скица-виза","Виза за проектиране":"Скица-виза","Пълномощно от собственика":"Пълномощно"};
 const DOCS=["ВиК — изходни данни","ВиК — съгласувана виза","Енерго Про — становище","Енерго Про — съгласувана виза","Геоложки доклад","Геодезическо заснемане","Ситуация","Проект (всички части)","Доклад за ЕЕ (оценка на съответствието)","Доклад за съответствие","Разрешение за строеж"];
 const HAVE=[["no","нямаме"],["asked","поискан"],["orig","оригинал"],["copy","копие"]];
 const HAVE_TEXT={no:"нямаме",asked:"поискан",orig:"оригинал",copy:"копие"};
@@ -380,6 +380,9 @@ function normalize(p){
   if(!Array.isArray(p.common)){p.common=COMMON.map(n=>({name:n,have:"no",where:"",date:"",note:""}));
     p.docs=p.docs.filter(d=>{const to=MOVED_TO_COMMON[d.name];if(!to)return true;
       const c=p.common.find(x=>x.name===to),first=d.by&&Object.values(d.by).find(Boolean);if(c&&first)Object.assign(c,first);return false})}
+  {const sk=p.common.findIndex(x=>x.name==="Скица от кадастъра"),vi=p.common.findIndex(x=>x.name==="Виза за проектиране");
+    if(sk>=0&&vi>=0){const a=p.common[sk],b=p.common[vi],rank={no:0,asked:1,copy:2,orig:3};const best=(rank[b.have]||0)>(rank[a.have]||0)?b:a;
+      p.common[sk]={name:"Скица-виза",have:best.have||"no",where:best.where||"",date:best.date||"",note:[a.note,b.note].filter(Boolean).join(" / "),files:[...(a.files||[]),...(b.files||[])]};p.common.splice(vi,1)}}
   if((p.v||1)<MODEL){
     p.steps.forEach(s=>{const t=TEMPLATE.find(x=>x.key===s.key);if(!t)return;
       if(OLD_NAMES[s.key]&&s.name===OLD_NAMES[s.key]){s.name=t.name;if(!s.term&&t.term)s.term={...t.term};if(t.from)s.from=t.from}});

@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111171848">
+<meta name="pt-build" content="20261111172133">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -204,7 +204,8 @@ table.st td.mono{white-space:nowrap}
 .tick{width:24px;height:24px;border-radius:50%;background:#1e8e3e;color:#fff;font-style:normal;font-weight:800;font-size:15px;line-height:24px;text-align:center;align-self:center}
 /* a speciality row opens downwards inside the same box, like a project card (his word 2026-11-11) */
 .spbox{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
-.spbox.on{border-color:var(--ink)}
+.spbox.on{border-color:var(--ink);margin:6px -13px;border-radius:0;border-left:0;border-right:0;box-shadow:0 4px 14px rgba(0,0,0,.12);z-index:1}
+.spbox.on .cdoc.spt{padding:14px 14px 12px 25px;background:var(--sunk)} .spbox.on .spbody{padding:12px 14px 14px 25px}
 .spbox .cdoc.spt{border:0;border-radius:0;width:100%;background:transparent}
 .spbox.on .snm{padding-right:44px}
 .spbody{border-top:1px solid var(--line);padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px}

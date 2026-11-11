@@ -579,7 +579,7 @@ async function putFile(path,b64,msg){
   for(let tries=0;;tries++){
     const body={message:msg,branch:BR,content:b64};if(shas[path])body.sha=shas[path];
     const r=await gh(dpath(path),{method:"PUT",body:JSON.stringify(body)},session.data);
-    if(r.ok){shas[path]=(await r.json()).content.sha;wroteAt[path]=Date.now();return}
+    if(r.ok){shas[path]=(await r.json()).content.sha;wroteAt[path]=Date.now();cacheSave();return}
     if((r.status===409||r.status===422)&&tries<3){const g=await gh(dpath(path)+"?ref="+BR,{cache:"no-store"},session.data);
       if(g.ok)shas[path]=(await g.json()).sha;else if(g.status===404)delete shas[path];continue}
     throw ghErr(r,"put");
@@ -610,6 +610,7 @@ async function pull(){
     else if(r.status!==404&&r.status!==409)throw ghErr(r,"tree");
     const seen=new Set(), nextP={...projects}, nextE={...people}, nextD={...devices};let changed=false;
     const mapOf=k=>k==="projects"?nextP:k==="people"?nextE:nextD;
+    const jobs=[];
     for(const t of tree){
       if(t.type!=="blob")continue;seen.add(t.path);
       const m=t.path.match(/^(projects|people|devices)\/([^/]+)\.json$/);
@@ -617,21 +618,30 @@ async function pull(){
       if(m[1]==="devices"&&wroteAt[t.path]&&nextD[m[2]]){shas[t.path]=shas[t.path]||t.sha;continue}
       if(shas[t.path]===t.sha&&mapOf(m[1])[m[2]])continue;
       if(wroteAt[t.path]&&Date.now()-wroteAt[t.path]<90000)continue; /* our own write may not show in the tree yet */
+      jobs.push({t,m});
+    }
+    /* all changed files at once, not one after another */
+    await Promise.all(jobs.map(async({t,m})=>{
       const b=await gh(`/repos/${GH_OWNER}/${DATA_REPO}/git/blobs/${t.sha}`,{cache:"default",headers:{"Accept":"application/vnd.github.raw+json"}},session.data);
-      if(!b.ok)continue;
+      if(!b.ok)return;
       const data=JSON.parse(td.decode(new Uint8Array(await b.arrayBuffer())));
       shas[t.path]=t.sha;changed=true;
       if(m[1]==="projects"){if(!dirty.has(m[2]))nextP[m[2]]=normalize(data)}else mapOf(m[1])[m[2]]=data;
-    }
+    }));
     for(const id of Object.keys(nextD)){const p="devices/"+id+".json";if(!seen.has(p)&&shas[p]&&!(wroteAt[p]&&Date.now()-wroteAt[p]<90000)){delete nextD[id];delete shas[p]}}
     devices=nextD;if(view==="users")renderUsers();
     for(const id of Object.keys(nextP)){const p="projects/"+id+".json";if(!seen.has(p)&&!dirty.has(id)&&shas[p]&&!(wroteAt[p]&&Date.now()-wroteAt[p]<90000)){delete nextP[id];delete shas[p];changed=true}}
     for(const id of Object.keys(nextE)){const p="people/"+id+".json";if(!seen.has(p)&&shas[p]&&!(wroteAt[p]&&Date.now()-wroteAt[p]<90000)){delete nextE[id];delete shas[p];changed=true}}
-    if(changed||firstPull){projects=nextP;people=nextE;ready=true;firstPull=false;renderSoon()}
+    if(changed||firstPull){projects=nextP;people=nextE;ready=true;firstPull=false;renderSoon();cacheSave()}
     hideBanner();
   }catch(e){ready=true;showBanner("Няма връзка с данните ("+esc(e.code||"мрежа")+"). Страницата ще опитва сама.");renderSoon()}
   finally{pulling=false}
 }
+/* the last data is kept on the device and shown at once on the next open; GitHub is asked behind it */
+const CACHE="pt_cache_v1";let cacheT=null;
+function cacheSave(){clearTimeout(cacheT);cacheT=setTimeout(()=>{try{localStorage.setItem(CACHE,JSON.stringify({projects,people,devices,shas}))}catch(e){}},800)}
+function cacheLoad(){try{const c=JSON.parse(localStorage.getItem(CACHE)||"null");if(!c||!c.projects)return false;
+  projects=c.projects;Object.values(projects).forEach(normalize);people=c.people||{};devices=c.devices||{};Object.assign(shas,c.shas||{});ready=true;return true}catch(e){return false}}
 function startPolling(){clearInterval(pullTimer);pullTimer=setInterval(()=>{if(!document.hidden)pull()},20000);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)pull()})}
 
@@ -707,12 +717,19 @@ async function boot(){
     dev=mt?{kind:"team",s:mt[1],name:old&&old.kind==="team"?old.name:"",dev:old&&old.dev||"d"+rnd(9),rec:false}
           :{kind:"admin",id:ma[1],s:ma[2],name:"",dev:old&&old.dev||"d"+rnd(9),rec:false}}
   else dev=devGet();
-  try{await loadUsers()}catch(e){gateMsg("Няма връзка с GitHub. Опитай пак след малко.");return}
+  /* a known device sees its last copy right away, read-only until GitHub answers */
+  let early=false;
+  if(dev&&cacheLoad()){early=true;canWrite=false;$("#gate").hidden=true;$("#app").hidden=false;
+    $("#whoName").textContent=dev.name||"";render()}
+  try{await loadUsers()}catch(e){if(early){showBanner("Няма връзка. Показвам последното записано на това устройство.");return}
+    gateMsg("Няма връзка с GitHub. Опитай пак след малко.");return}
+  if(early&&(!usersDoc||!usersDoc.vault||!dev)){$("#app").hidden=true;$("#gate").hidden=false}
   if(!usersDoc||!usersDoc.vault){$("#setupForm").hidden=false;return}
   if(!dev){$("#needLink").hidden=false;return}
   /* no name question on open (his word 2026-11-11) - the device is told apart by its own id */
   if(dev.kind==="team"&&!dev.name)dev.name="Колега "+dev.dev.slice(1,5);
-  try{await openWith(dev)}catch(e){devDel();$("#needLink").hidden=false;gateMsg("Този линк вече не важи. Поискай нов.");return}
+  try{await openWith(dev)}catch(e){devDel();try{localStorage.removeItem(CACHE)}catch(_){}projects={};people={};
+    $("#app").hidden=true;$("#gate").hidden=false;$("#needLink").hidden=false;gateMsg("Този линк вече не важи. Поискай нов.");return}
   devSet(dev);enterApp();
 }
 $("#nameForm").addEventListener("submit",async e=>{
@@ -755,7 +772,7 @@ $("#setupForm").addEventListener("submit",async e=>{
     $("#suData").value="";$("#setupForm").hidden=true;gateMsg("");enterApp();
   }catch(err){gateMsg("Не се записа ("+(err.code||"грешка")+"). В GitHub избери и двете: ProjectTrack и ProjectTrack-data, с Contents: Read and write.")}
 });
-$("#logout").addEventListener("click",()=>{devDel();location.reload()});
+$("#logout").addEventListener("click",()=>{devDel();try{localStorage.removeItem(CACHE)}catch(_){}location.reload()});
 
 /* ---------- logins screen (only for logins that hand out logins) ---------- */
 let confirmDev=null;
@@ -1252,7 +1269,7 @@ window.addEventListener("appinstalled",()=>{$("#installBtn").hidden=true});
 $("#installBtn").addEventListener("click",async()=>{if(!installEv)return;installEv.prompt();try{await installEv.userChoice}catch(_){}installEv=null;$("#installBtn").hidden=true});
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 /* iPhone ignores "no zoom" in the viewport line - stop the pinch and double-tap zoom by hand */
-if(matchMedia("(pointer:coarse)").matches){
+if(window.matchMedia&&matchMedia("(pointer:coarse)").matches){
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
   document.addEventListener("touchmove",e=>{if(e.touches&&e.touches.length>1)e.preventDefault()},{passive:false});
   let lastTap=0;document.addEventListener("touchend",e=>{const n=Date.now();if(n-lastTap<300&&!e.target.closest("input,textarea,select"))e.preventDefault();lastTap=n},{passive:false});

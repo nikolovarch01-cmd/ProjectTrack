@@ -189,15 +189,14 @@ table.st td.mono{white-space:nowrap}
 
 <div class="gate panel" id="gate">
   <h1>Съгласувания</h1>
-  <form id="loginForm" class="gate" style="margin:0" hidden>
-    <label class="f">Име<input id="lgName" type="text" autocomplete="username" required></label>
-    <label class="f">Парола<input id="lgPass" type="password" autocomplete="current-password" required></label>
+  <div id="needLink" hidden>Отвори линка, който ти е изпратен.</div>
+  <form id="nameForm" class="gate" style="margin:0" hidden>
+    <label class="f">Твоето име<input id="nmName" type="text" autocomplete="name" required></label>
     <button class="primary" type="submit">Влез</button>
   </form>
   <form id="setupForm" class="gate" style="margin:0" hidden>
     <h2>Първа настройка</h2>
     <label class="f">Твоето име<input id="suName" type="text" autocomplete="username" required></label>
-    <label class="f">Парола (поне 8 знака)<input id="suPass" type="password" autocomplete="new-password" minlength="8" required></label>
     <label class="f">Ключ за данните (saglasuvaniya-data)<input id="suData" type="password" autocomplete="off" required></label>
     <label class="f">Ключ за страницата (saglasuvaniya)<input id="suPage" type="password" autocomplete="off" required></label>
     <button class="primary" type="submit">Запиши</button>
@@ -217,13 +216,21 @@ table.st td.mono{white-space:nowrap}
   </div>
   <div id="banner" class="banner" hidden></div>
   <section id="v-users" class="view panel" hidden><div class="row end"><h2>Входове</h2><button data-view="main">Затвори</button></div>
-    <div class="ulist" id="ulist"></div>
+    <label class="f">Общ линк за колегите</label>
     <div class="row">
-      <label class="f" style="flex:1 1 160px">Име<input id="nuName" type="text" autocomplete="off"></label>
-      <label class="f" style="flex:1 1 160px">Парола (поне 8 знака)<input id="nuPass" type="text" autocomplete="off"></label>
-      <label class="check"><input type="checkbox" id="nuAdmin"> дава входове</label>
-      <button id="nuAdd" class="primary">Добави</button>
+      <input id="linkOut" type="text" readonly style="flex:1 1 260px">
+      <button id="linkCopy" data-copy="linkOut">Копирай</button>
+      <button id="linkShare" data-share="linkOut">Изпрати</button>
+      <button id="linkNew" class="ghost danger">Нов общ линк</button>
     </div>
+    <label class="f">Твоят линк (с „Входове“, за твоя телефон)</label>
+    <div class="row">
+      <input id="myLinkOut" type="text" readonly style="flex:1 1 260px">
+      <button data-copy="myLinkOut">Копирай</button>
+      <button data-share="myLinkOut">Изпрати</button>
+    </div>
+    <h2>Влезли</h2>
+    <div class="ulist" id="ulist"></div>
     <div class="row">
       <label class="f" style="flex:1 1 260px">Нов ключ за данните<input id="nkData" type="password" autocomplete="off"></label>
       <button id="nkSave">Смени ключа</button>
@@ -431,7 +438,7 @@ function forecast(p,k,today){
 /* ---------- store: Claude db, or this browser only ---------- */
 let store=null, canWrite=true, projects={}, ready=false, assetsNs=null, uploading=0;
 /* engineers: one shared list (collection "people"), each speciality row points to one by id */
-let people={}, peopleStore=null;
+let people={}, peopleStore=null, devices={};
 function personName(pid){return pid&&people[pid]?people[pid].name:""}
 function engOptions(s){
   const list=Object.entries(people).sort((a,b)=>{const am=a[1].spec===s.name?0:1,bm=b[1].spec===s.name?0:1;return am-bm||a[1].name.localeCompare(b[1].name)});
@@ -464,12 +471,14 @@ async function uploadFiles(list,target,id){
   }
 }
 /* ---------- GitHub: the page lives on GitHub Pages, the data in a PRIVATE repo ----------
-   users.json (next to this page, public) holds per-login sealed keys: each login's password
-   unwraps a random vault key K; K opens the vault with the data-repo token. Logins that may
-   hand out logins also carry the page-repo token (to rewrite users.json). Tokens live only
-   in sessionStorage. */
+   users.json (next to this page, public): vault = K -> {data-repo token}; team = link secret -> {K};
+   admins[] = admin link secret -> {K, page-repo token}. The device keeps only the link secret and
+   the name (localStorage); tokens are unsealed on every open and kept in memory. */
 const GH_OWNER="nikolovarch01-cmd", PAGE_REPO="saglasuvaniya", DATA_REPO="saglasuvaniya-data", BR="main", API="https://api.github.com";
-const SESS="pt_session_v1", PBKDF2_IT=600000;
+const SESS="pt_device_v1";
+const devGet=()=>{try{return JSON.parse(localStorage.getItem(SESS)||"null")}catch(e){return null}};
+const devSet=s=>{try{localStorage.setItem(SESS,JSON.stringify(s))}catch(e){}};
+const devDel=()=>{try{localStorage.removeItem(SESS)}catch(e){}};
 let session=null, usersDoc=null, usersSha=null;
 const shas={}, wroteAt={}, blobUrl={}, blobBusy={};
 const te=new TextEncoder(), td=new TextDecoder();
@@ -481,9 +490,21 @@ async function aesKey(raw){return crypto.subtle.importKey("raw",raw,{name:"AES-G
 async function seal(key,obj){const iv=crypto.getRandomValues(new Uint8Array(12));
   return{iv:u8b64(iv),ct:u8b64(new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},key,te.encode(JSON.stringify(obj)))))}}
 async function unseal(key,e){return JSON.parse(td.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b64u8(e.iv)},key,b64u8(e.ct))))}
-async function makeLogin(name,pw,admin,kRaw,pageTok){const salt=crypto.getRandomValues(new Uint8Array(16));
-  const s=await seal(await pwKey(pw,salt,PBKDF2_IT),admin?{k:u8b64(kRaw),page:pageTok}:{k:u8b64(kRaw)});
-  return{name,admin:!!admin,salt:u8b64(salt),it:PBKDF2_IT,...s}}
+/* logins are links (his word 2026-11-11: no passwords). One common link for the colleagues (#t=<secret>):
+   the first open asks the name, the device remembers it and is recorded in devices/<id>.json, so each person
+   is told apart and can be removed. Admin links (#a=<id>.<secret>) also carry the page key ("Входове").
+   Secrets are random, so no stretching is needed. */
+const LINK_IT=1000;
+const rnd=n=>u8b64(crypto.getRandomValues(new Uint8Array(n))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+async function pageKeyOf(pageTok){return aesKey(new Uint8Array(await crypto.subtle.digest("SHA-256",te.encode("pt-links|"+pageTok))))}
+async function wrapFor(secret,obj){const salt=crypto.getRandomValues(new Uint8Array(16));return{salt:u8b64(salt),it:LINK_IT,...await seal(await pwKey(secret,salt,LINK_IT),obj)}}
+async function unwrapWith(secret,e){return unseal(await pwKey(secret,b64u8(e.salt),e.it),e)}
+async function makeTeam(kRaw,pageTok){const secret=rnd(18);
+  return{...await wrapFor(secret,{k:u8b64(kRaw)}),adm:await seal(await pageKeyOf(pageTok),{secret})}}
+async function makeAdmin(name,kRaw,pageTok){const id="a"+rnd(6),secret=rnd(18);
+  return{id,name,...await wrapFor(secret,{k:u8b64(kRaw),page:pageTok}),adm:await seal(await pageKeyOf(pageTok),{secret})}}
+const base=()=>location.origin+location.pathname;
+const teamLink=s=>base()+"#t="+s, adminLink=(id,s)=>base()+"#a="+id+"."+s;
 const sameName=(a,b)=>String(a).trim().toLocaleLowerCase("bg")===String(b).trim().toLocaleLowerCase("bg");
 
 function gh(path,opt={},tok){
@@ -504,7 +525,7 @@ async function loadUsers(){
   throw ghErr(r,"users");
 }
 async function saveUsers(doc,pageTok){
-  const body={message:"logins: "+(session?session.name:doc.users[0].name),branch:BR,content:u8b64(te.encode(JSON.stringify(doc,null,1)))};
+  const body={message:"logins: "+(session?session.name:"setup"),branch:BR,content:u8b64(te.encode(JSON.stringify(doc,null,1)))};
   if(usersSha)body.sha=usersSha;
   let r=await gh(`/repos/${GH_OWNER}/${PAGE_REPO}/contents/users.json`,{method:"PUT",body:JSON.stringify(body)},pageTok);
   if(r.status===409||r.status===422){const g=await gh(`/repos/${GH_OWNER}/${PAGE_REPO}/contents/users.json?ref=${BR}`,{cache:"no-store"},pageTok);
@@ -550,19 +571,23 @@ async function pull(){
     let tree=[];
     if(r.ok)tree=(await r.json()).tree||[];
     else if(r.status!==404&&r.status!==409)throw ghErr(r,"tree");
-    const seen=new Set(), nextP={...projects}, nextE={...people};let changed=false;
+    const seen=new Set(), nextP={...projects}, nextE={...people}, nextD={...devices};let changed=false;
+    const mapOf=k=>k==="projects"?nextP:k==="people"?nextE:nextD;
     for(const t of tree){
       if(t.type!=="blob")continue;seen.add(t.path);
-      const m=t.path.match(/^(projects|people)\/([^/]+)\.json$/);
+      const m=t.path.match(/^(projects|people|devices)\/([^/]+)\.json$/);
       if(!m){shas[t.path]=shas[t.path]||t.sha;continue}
-      if(shas[t.path]===t.sha&&(m[1]==="projects"?nextP[m[2]]:nextE[m[2]]))continue;
+      if(m[1]==="devices"&&wroteAt[t.path]&&nextD[m[2]]){shas[t.path]=shas[t.path]||t.sha;continue}
+      if(shas[t.path]===t.sha&&mapOf(m[1])[m[2]])continue;
       if(wroteAt[t.path]&&Date.now()-wroteAt[t.path]<90000)continue; /* our own write may not show in the tree yet */
       const b=await gh(`/repos/${GH_OWNER}/${DATA_REPO}/git/blobs/${t.sha}`,{cache:"default",headers:{"Accept":"application/vnd.github.raw+json"}},session.data);
       if(!b.ok)continue;
       const data=JSON.parse(td.decode(new Uint8Array(await b.arrayBuffer())));
       shas[t.path]=t.sha;changed=true;
-      if(m[1]==="projects"){if(!dirty.has(m[2]))nextP[m[2]]=normalize(data)}else nextE[m[2]]=data;
+      if(m[1]==="projects"){if(!dirty.has(m[2]))nextP[m[2]]=normalize(data)}else mapOf(m[1])[m[2]]=data;
     }
+    for(const id of Object.keys(nextD)){const p="devices/"+id+".json";if(!seen.has(p)&&shas[p]&&!(wroteAt[p]&&Date.now()-wroteAt[p]<90000)){delete nextD[id];delete shas[p]}}
+    devices=nextD;if(view==="users")renderUsers();
     for(const id of Object.keys(nextP)){const p="projects/"+id+".json";if(!seen.has(p)&&!dirty.has(id)&&shas[p]&&!(wroteAt[p]&&Date.now()-wroteAt[p]<90000)){delete nextP[id];delete shas[p];changed=true}}
     for(const id of Object.keys(nextE)){const p="people/"+id+".json";if(!seen.has(p)&&shas[p]&&!(wroteAt[p]&&Date.now()-wroteAt[p]<90000)){delete nextE[id];delete shas[p];changed=true}}
     if(changed||firstPull){projects=nextP;people=nextE;ready=true;firstPull=false;renderSoon()}
@@ -613,34 +638,58 @@ function gateMsg(t){$("#gateErr").textContent=t||""}
 function enterApp(){
   $("#gate").hidden=true;$("#app").hidden=false;
   $("#whoName").textContent=session.name;$("#usersBtn").hidden=!session.admin;
-  initStore();render();
+  initStore();render();recordDevice();
 }
-async function boot(){
-  try{session=JSON.parse(sessionStorage.getItem(SESS)||"null")}catch(e){session=null}
-  if(session&&session.data){enterApp();return}
-  gateMsg("");
-  try{await loadUsers()}catch(e){gateMsg("Няма връзка с GitHub. Опитай пак след малко.");return}
-  if(usersDoc&&usersDoc.users&&usersDoc.users.length){$("#loginForm").hidden=false;$("#lgName").focus()}
-  else $("#setupForm").hidden=false;
-}
-$("#loginForm").addEventListener("submit",async e=>{
-  e.preventDefault();gateMsg("Проверявам…");
-  const name=$("#lgName").value,pw=$("#lgPass").value;
-  try{await loadUsers()}catch(_){}
-  const u=usersDoc&&(usersDoc.users||[]).find(x=>sameName(x.name,name));
-  if(!u){gateMsg("Грешно име или парола.");return}
+/* what this device remembers: {kind:"team"|"admin", name, s:secret, id?:admin id, dev:device id, rec:recorded} */
+async function openWith(dev){
+  const hasDoc=usersDoc&&usersDoc.vault;if(!hasDoc)throw new Error("nodoc");
   let inner;
-  try{inner=await unseal(await pwKey(pw,b64u8(u.salt),u.it),u)}catch(_){gateMsg("Грешно име или парола.");return}
-  try{const vault=await unseal(await aesKey(b64u8(inner.k)),usersDoc.vault);
-    session={name:u.name,admin:!!u.admin,data:vault.data,k:inner.k,page:inner.page||""};}
-  catch(_){gateMsg("Входът е повреден. Поискай нов.");return}
-  try{sessionStorage.setItem(SESS,JSON.stringify(session))}catch(_){}
-  $("#lgPass").value="";gateMsg("");enterApp();
+  if(dev.kind==="admin"){const a=(usersDoc.admins||[]).find(x=>x.id===dev.id);if(!a)throw new Error("gone");inner=await unwrapWith(dev.s,a);dev.name=dev.name||a.name}
+  else{if(!usersDoc.team)throw new Error("gone");inner=await unwrapWith(dev.s,usersDoc.team)}
+  const vault=await unseal(await aesKey(b64u8(inner.k)),usersDoc.vault);
+  session={name:dev.name,admin:!!inner.page,data:vault.data,k:inner.k,page:inner.page||"",dev:dev.dev};
+}
+let pendingDev=null;
+async function boot(){
+  gateMsg("");
+  const h=location.hash;let dev=null;
+  const mt=h.match(/^#t=([\w-]+)$/), ma=h.match(/^#a=(a[\w-]+)\.([\w-]+)$/);
+  if(mt||ma){history.replaceState(null,"",base());const old=devGet();
+    dev=mt?{kind:"team",s:mt[1],name:old&&old.kind==="team"?old.name:"",dev:old&&old.dev||"d"+rnd(9),rec:old&&old.rec}
+          :{kind:"admin",id:ma[1],s:ma[2],name:"",dev:old&&old.dev||"d"+rnd(9),rec:old&&old.rec}}
+  else dev=devGet();
+  try{await loadUsers()}catch(e){gateMsg("Няма връзка с GitHub. Опитай пак след малко.");return}
+  if(!usersDoc||!usersDoc.vault){$("#setupForm").hidden=false;return}
+  if(!dev){$("#needLink").hidden=false;return}
+  if(dev.kind==="team"&&!dev.name){pendingDev=dev;$("#nameForm").hidden=false;$("#nmName").focus();return}
+  try{await openWith(dev)}catch(e){devDel();$("#needLink").hidden=false;gateMsg("Този линк вече не важи. Поискай нов.");return}
+  devSet(dev);enterApp();
+}
+$("#nameForm").addEventListener("submit",async e=>{
+  e.preventDefault();const name=$("#nmName").value.trim();if(!name||!pendingDev)return;
+  const dev={...pendingDev,name};
+  try{await openWith(dev)}catch(_){gateMsg("Този линк вече не важи. Поискай нов.");return}
+  devSet(dev);$("#nameForm").hidden=true;gateMsg("");enterApp();
 });
+/* the device is written once a day into devices/<id>.json: who, phone or computer, first and last day */
+async function recordDevice(){
+  const dev=devGet();if(!dev||!session)return;const path="devices/"+dev.dev+".json";
+  try{
+    const g=await gh(dpath(path)+"?ref="+BR,{cache:"no-store"},session.data);
+    if(g.status===404&&dev.rec){devDel();sessionStop("Достъпът от това устройство е спрян. Поискай нов линк.");return}
+    let cur=null;if(g.ok){const j=await g.json();shas[path]=j.sha;cur=JSON.parse(td.decode(b64u8(j.content.replace(/\s/g,""))))}
+    const today=todayStr();if(cur&&cur.last===today&&cur.name===session.name)return;
+    const ua=navigator.userAgent||"";const kind=/iPhone|iPad|Android|Mobile/i.test(ua)?"телефон":"компютър";
+    const rec={name:session.name,kind,admin:!!session.admin,first:cur&&cur.first||today,last:today};
+    devices[dev.dev]=rec;await queue(()=>putFile(path,jsonB64(rec),session.name+": device"));
+    dev.rec=true;devSet(dev);
+  }catch(_){}
+}
+function sessionStop(t){session=null;clearInterval(pullTimer);$("#app").hidden=true;$("#gate").hidden=false;$("#needLink").hidden=false;gateMsg(t)}
 $("#setupForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  const name=$("#suName").value.trim(),pw=$("#suPass").value,data=$("#suData").value.trim(),page=$("#suPage").value.trim();
-  if(!name||pw.length<8){gateMsg("Паролата трябва да е поне 8 знака.");return}
+  const name=$("#suName").value.trim(),data=$("#suData").value.trim(),page=$("#suPage").value.trim();
+  if(!name)return;
   gateMsg("Проверявам ключовете…");
   const d=await gh(`/repos/${GH_OWNER}/${DATA_REPO}`,{},data).catch(()=>null);
   if(!d||!d.ok){gateMsg("Ключът за данните не отваря saglasuvaniya-data.");return}
@@ -648,45 +697,53 @@ $("#setupForm").addEventListener("submit",async e=>{
   if(!pg||!pg.ok){gateMsg("Ключът за страницата не отваря saglasuvaniya.");return}
   try{
     const kRaw=crypto.getRandomValues(new Uint8Array(32));
-    const doc={v:1,vault:await seal(await aesKey(kRaw),{data}),users:[await makeLogin(name,pw,true,kRaw,page)]};
+    const me=await makeAdmin(name,kRaw,page);
+    const mySecret=(await unseal(await pageKeyOf(page),me.adm)).secret;
+    const doc={v:2,vault:await seal(await aesKey(kRaw),{data}),team:await makeTeam(kRaw,page),admins:[me]};
     await saveUsers(doc,page);
-    session={name,admin:true,data,k:u8b64(kRaw),page};
-    try{sessionStorage.setItem(SESS,JSON.stringify(session))}catch(_){}
-    $("#suPass").value=$("#suData").value=$("#suPage").value="";gateMsg("");enterApp();
+    const old=devGet();devSet({kind:"admin",id:me.id,s:mySecret,name,dev:old&&old.dev||"d"+rnd(9)});
+    session={name,admin:true,data,k:u8b64(kRaw),page,dev:devGet().dev};
+    $("#suData").value=$("#suPage").value="";$("#setupForm").hidden=true;gateMsg("");enterApp();
   }catch(err){gateMsg("Не се записа ("+(err.code||"грешка")+"). Ключът за страницата трябва да може да пише.")}
 });
-$("#logout").addEventListener("click",()=>{try{sessionStorage.removeItem(SESS)}catch(_){}location.reload()});
+$("#logout").addEventListener("click",()=>{devDel();location.reload()});
 
 /* ---------- logins screen (only for logins that hand out logins) ---------- */
-let confirmUser=null;
-function renderUsers(){
-  const list=(usersDoc&&usersDoc.users)||[];
-  $("#ulist").innerHTML=list.map((u,i)=>`<div class="u"><span>${esc(u.name)}${u.admin?` <span class="hint">· дава входове</span>`:""}</span>${sameName(u.name,session.name)?`<span class="hint">ти</span>`:`<button class="ghost danger" data-udel="${i}">${confirmUser===i?"махни?":"Махни"}</button>`}</div>`).join("")||`<div class="empty">—</div>`;
+let confirmDev=null;
+async function renderUsers(){
+  const dv=devGet()||{};
+  const rows=Object.entries(devices).sort((a,b)=>String(b[1].last||"").localeCompare(String(a[1].last||"")));
+  $("#ulist").innerHTML=rows.map(([id,d])=>`<div class="u"><span>${esc(d.name||"?")} <span class="hint">· ${esc(d.kind||"")} · от ${bgShort(d.first)} · последно ${bgShort(d.last)}${d.admin?" · дава входове":""}</span></span>${id===dv.dev?`<span class="hint">това устройство</span>`:`<button class="ghost danger" data-ddel="${esc(id)}">${confirmDev===id?"махни?":"Махни"}</button>`}</div>`).join("")||`<div class="empty">—</div>`;
+  try{const pk=await pageKeyOf(session.page);
+    if(usersDoc&&usersDoc.team)$("#linkOut").value=teamLink((await unseal(pk,usersDoc.team.adm)).secret);
+    const me=(usersDoc&&usersDoc.admins||[]).find(a=>a.id===dv.id)||(usersDoc&&usersDoc.admins||[])[0];
+    if(me)$("#myLinkOut").value=adminLink(me.id,(await unseal(pk,me.adm)).secret);
+  }catch(_){}
 }
 async function refreshUsers(){try{await loadUsers()}catch(_){}renderUsers()}
 function uMsg(t){$("#uMsg").textContent=t||""}
+let confirmNewLink=false;
 $("#v-users").addEventListener("click",async e=>{
   const b=e.target.closest("button");if(!b||!session||!session.admin)return;
-  if(b.dataset.udel!==undefined){const i=+b.dataset.udel;if(confirmUser!==i){confirmUser=i;renderUsers();return}
-    confirmUser=null;await refreshUsers();const doc=JSON.parse(JSON.stringify(usersDoc));const gone=doc.users.splice(i,1)[0];
-    try{await saveUsers(doc,session.page);uMsg("Махнат: "+gone.name)}catch(err){uMsg("Не се записа ("+(err.code||"грешка")+").")}renderUsers();return}
-  if(b.id==="nuAdd"){
-    const name=$("#nuName").value.trim(),pw=$("#nuPass").value,admin=$("#nuAdmin").checked;
-    if(!name){uMsg("Напиши име.");return}if(pw.length<8){uMsg("Паролата трябва да е поне 8 знака.");return}
-    uMsg("Записвам…");await refreshUsers();
-    const doc=JSON.parse(JSON.stringify(usersDoc||{v:1,users:[]}));
-    if(doc.users.some(u=>sameName(u.name,name))){uMsg("Това име вече има вход.");return}
-    try{doc.users.push(await makeLogin(name,pw,admin,b64u8(session.k),session.page));await saveUsers(doc,session.page);
-      $("#nuName").value=$("#nuPass").value="";$("#nuAdmin").checked=false;uMsg("Добавен: "+name+". Дай му името и паролата.")}
-    catch(err){uMsg("Не се записа ("+(err.code||"грешка")+").")}
-    renderUsers();return}
+  if(b.dataset.copy){const v=$("#"+b.dataset.copy).value;try{await navigator.clipboard.writeText(v);uMsg("Копирано.")}catch(_){$("#"+b.dataset.copy).select();document.execCommand("copy");uMsg("Копирано.")}return}
+  if(b.dataset.share){const v=$("#"+b.dataset.share).value;
+    if(navigator.share){navigator.share({title:"Съгласувания",url:v}).catch(()=>{})}else{try{await navigator.clipboard.writeText(v);uMsg("Копирано. Пусни го във Viber или имейл.")}catch(_){}}return}
+  if(b.dataset.ddel){const id=b.dataset.ddel;if(confirmDev!==id){confirmDev=id;renderUsers();return}
+    confirmDev=null;const nm=devices[id]&&devices[id].name;delete devices[id];renderUsers();
+    try{await queue(()=>delFile("devices/"+id+".json",session.name+": remove device "+(nm||id)));uMsg("Махнат: "+(nm||id)+". При следващото отваряне ще иска нов линк.")}
+    catch(err){uMsg("Не се махна ("+(err.code||"грешка")+").")}return}
+  if(b.id==="linkNew"){if(!confirmNewLink){confirmNewLink=true;b.textContent="спира стария линк?";return}
+    confirmNewLink=false;b.textContent="Нов общ линк";uMsg("Записвам…");await refreshUsers();
+    try{const doc=JSON.parse(JSON.stringify(usersDoc));doc.team=await makeTeam(b64u8(session.k),session.page);await saveUsers(doc,session.page);
+      uMsg("Новият линк е готов. Старият спира при следващото отваряне.");renderUsers()}
+    catch(err){uMsg("Не се записа ("+(err.code||"грешка")+").")}return}
   if(b.id==="nkSave"){
     const data=$("#nkData").value.trim();if(!data)return;uMsg("Проверявам ключа…");
     const d=await gh(`/repos/${GH_OWNER}/${DATA_REPO}`,{},data).catch(()=>null);
     if(!d||!d.ok){uMsg("Ключът не отваря saglasuvaniya-data.");return}
     await refreshUsers();const doc=JSON.parse(JSON.stringify(usersDoc));
     try{doc.vault=await seal(await aesKey(b64u8(session.k)),{data});await saveUsers(doc,session.page);
-      session.data=data;try{sessionStorage.setItem(SESS,JSON.stringify(session))}catch(_){}
+      session.data=data;
       $("#nkData").value="";uMsg("Ключът е сменен за всички входове.")}
     catch(err){uMsg("Не се записа ("+(err.code||"грешка")+").")}
   }

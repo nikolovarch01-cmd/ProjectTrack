@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111165816">
+<meta name="pt-build" content="20261111170019">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -1179,8 +1179,7 @@ function editor(id,p,today){
       <div class="cgrid">
         ${keys.map(k=>`<label class="f wh">${keys.length>1?esc(plotLabel(k)):"Състояние"}<select id="sst-${sp}-${esc(k)}" data-sstate="${i}|${esc(k)}"${ro}>${opt(Object.entries(SPEC_TEXT),(s.by||{})[k]||"not")}</select></label>`).join("")}
         <label class="f wh">Инженер<select id="se-${sp}" data-si="${i}" data-sk="eng"${ro}>${engOptions(s)}</select></label>
-        <label class="f">Подадена<input type="date" id="ss-${sp}" data-si="${i}" data-sk="sent" value="${esc(s.sent)}"${ro}></label>
-        <label class="f">Срок<input type="date" id="sd-${sp}" data-si="${i}" data-sk="due" value="${esc(s.due)}"${late?' style="border-color:var(--late);color:var(--late)"':""}${ro}></label>
+        ${keys.some(k=>["sent","back"].includes((s.by||{})[k]))?`<label class="f wh">Срок<input type="date" id="sd-${sp}" data-si="${i}" data-sk="due" value="${esc(s.due)}"${late?' style="border-color:var(--late);color:var(--late)"':""}${ro}></label>`:""}
         ${AP_ORG[s.name]?keys.map(k=>`<label class="f wh">${esc(AP_ORG[s.name])}${keys.length>1?" "+esc(plotLabel(k)):""}<select id="sap-${sp}-${esc(k)}" data-sap="${i}|${esc(k)}"${ro}>${opt(Object.entries(AP_TEXT),((s.ap||{})[k])||"not")}</select></label>`).join(""):""}
       </div>
       ${per&&per.phone?`<a class="tel" href="tel:${esc(per.phone.replace(/\s/g,""))}">${esc(per.phone)}</a>`:""}

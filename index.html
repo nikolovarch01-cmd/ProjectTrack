@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111171138">
+<meta name="pt-build" content="20261111171215">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -213,10 +213,10 @@ table.st td.mono{white-space:nowrap}
 summary .tick{display:inline-block;vertical-align:middle;margin-right:8px;width:20px;height:20px;line-height:20px;font-size:13px} summary .tick.off{display:none}
 .apl{font-size:11px;color:var(--muted);line-height:1;margin-top:8px}
 .cdoc.spt b{display:flex;align-items:flex-start} .cdoc.spt b .dot{margin-top:5px}
-.card.pr-r{border-left:6px solid #d93025} .card.pr-o{border-left:6px solid #f29900} .card.pr-y{border-left:6px solid #f5d000} .card.pr-g{border-left:6px solid #1e8e3e}
+.card.pr-r{border-left:6px solid #d93025} .card.pr-o{border-left:6px solid #f29900} .card.pr-y{border-left:6px solid #f5d000} .card.pr-g{border-left:6px solid #1e8e3e} .card.pr-b{border-left:6px solid #1a73e8}
 .prio{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)} .prio span{margin-right:4px}
 .pdot{width:30px;height:30px;padding:0;border-radius:50%;border:2px solid transparent;box-shadow:inset 0 0 0 3px var(--surface)}
-.pdot.pr-r{background:#d93025} .pdot.pr-o{background:#f29900} .pdot.pr-y{background:#f5d000} .pdot.pr-g{background:#1e8e3e} .pdot.pr-none{background:var(--sunk);border-color:var(--line)}
+.pdot.pr-r{background:#d93025} .pdot.pr-o{background:#f29900} .pdot.pr-y{background:#f5d000} .pdot.pr-g{background:#1e8e3e} .pdot.pr-b{background:#1a73e8} .pdot.pr-none{background:#fff;border-color:var(--line)}
 .pdot.on{border-color:var(--ink)}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:1px;flex:none}
 .dot.d-r{background:#d93025} .dot.d-o{background:#f29900} .dot.d-g{background:#1e8e3e}
@@ -925,8 +925,8 @@ function flush(id){
 
 /* ---------- view state ---------- */
 /* project urgency set by hand (his word 2026-11-11): red on top, then orange, yellow, green, none */
-const PRIOS=[["r","спешно"],["o","оранжево"],["y","жълто"],["g","не бърза"],["","без цвят"]];
-const PRIO_RANK={r:0,o:1,y:2,g:3,"":4};
+const PRIOS=[["r","червено"],["o","оранжево"],["y","жълто"],["g","зелено"],["b","синьо"],["","бяло"]];
+const PRIO_RANK={r:0,o:1,y:2,g:3,b:4,"":5};
 /* status dot (his word 2026-11-11): red = not started, orange = under way, green = done */
 const ARCH_DOT={not:"r",idea:"o",tech:"o",ready:"g"};
 function specDot(s,keys){const v=keys.map(k=>(s.by||{})[k]||"not");return v.every(x=>x==="ready")?"g":v.every(x=>x==="not")?"r":"o"}

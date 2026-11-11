@@ -1,0 +1,31 @@
+{
+ "v": 2,
+ "vault": {
+  "iv": "EgX2+g+aSIAAhGS2",
+  "ct": "nnKWlOFdYSLZXs8+348QjRVkZqoL/sLP/cjOh9s3P3SYN5hdgqjRX2xf1vnKk5KoWFqSnV8mqVqDARo6NGEF/7Nnvr8T+gPVLfx4nfvdEc2i03YTX0Zlzz4VxfrbR0UvC0QXY6TkmnKT6NaCBJr++pGOb0IYc4mr"
+ },
+ "team": {
+  "salt": "C4GkZaCRy7qzIfpBZ8U5bQ==",
+  "it": 1000,
+  "iv": "FEpxQ505q+OzvSOK",
+  "ct": "IHSZyO0pHPnano+93DrT+ybQdy6+QrXKkqYJR/fyqWAUgUAZnWHlv6RmSchVanINEN3DLYdS5EqaZj+M1Po4ANGjn6Q=",
+  "adm": {
+   "iv": "rw12h2J9CBjXVSF5",
+   "ct": "BAlGSsOYDOSqlw2ziCLiIXQSqmMh4NjYNaYImn1JA5liXw5aR7FXuDRmQnmoaslnlrgfVHA="
+  }
+ },
+ "admins": [
+  {
+   "id": "auGnACnNg",
+   "name": "Михаил",
+   "salt": "cGRlV9X5L7coy3nNdrWlJg==",
+   "it": 1000,
+   "iv": "RjYuv0nyiIZGFfxL",
+   "ct": "Ky2Ixgkntt7t1s1AqeaCXMJgnlqhSFrU7b0pXw9ua1oZwqk+pVIPzv9RzR80qVLQBtp2qv7QFcMXo6LgEtNw65LrvQHOEQ+6jp0cOAB1oL7N1ts4QnhrPIW2ME3qhZJ/aASp0FGBgMNsP4hcLbQku1Q+1JcG0d46cVGCyYNfg3fFERXBcNSsV7AzobhK+lOREXLIqJxTA57kN7Ux9mnK1ZAk/4qA2w++Isci",
+   "adm": {
+    "iv": "N7xdwfzg6ReB/CmC",
+    "ct": "xISXR0juyfTAsbF57Y1GsAaDf/N3ip5jC0dAVu54hKVJRPInb49NHDQf4XZOmVHXneS69k8="
+   }
+  }
+ ]
+}

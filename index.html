@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111152908">
+<meta name="pt-build" content="20261111153123">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -177,7 +177,7 @@ table.st td.mono{white-space:nowrap}
 .cdoc.h-no{background:var(--late-bg);color:var(--late)} .cdoc.h-asked{background:var(--soon-bg);color:var(--soon)}
 .cdoc.h-orig{background:var(--ok-bg);color:var(--ok)} .cdoc.h-copy{background:var(--accent-bg);color:var(--accent)}
 .cdoc.sel{border-color:var(--ink)} .cdoc .nf{opacity:.75}
-.capp{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center} .capp .check{font-size:14px} .capp .off{color:var(--faint)}
+.capp{display:flex;flex-direction:column;align-items:flex-start;gap:6px} .capp .capt{font-size:12px;font-weight:600;color:var(--muted)} .capp .check{font-size:14px} .capp .off{color:var(--faint)}
 .cadd{display:flex;gap:4px;align-items:center;grid-column:1/-1;max-width:360px} .cadd input{min-width:0}
 .files{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
 .file{display:flex;flex-direction:column;gap:2px;width:108px;font-size:12px;position:relative}
@@ -1124,7 +1124,7 @@ function editor(id,p,today){
 }
 function commonApprovals(p,c){
   const steps=(COMMON_STEPS[c.name]||[]).map(k=>stepByKey(p,k)).filter(Boolean),keys=plotKeys(p);if(!steps.length)return"";
-  return`<div class="capp"><span class="hint">Съгласувана с</span>${keys.map(k=>steps.map(s=>{const sk=skipped(p,s,k),dn=isDone(p,s,k),cl=cellOf(s,k);
+  return`<div class="capp"><span class="capt">Съгласувано:</span>${keys.map(k=>steps.map(s=>{const sk=skipped(p,s,k),dn=isDone(p,s,k),cl=cellOf(s,k);
     return`<label class="check${sk?" off":""}"><input type="checkbox" data-capp="${s.key}|${esc(k)}"${dn?" checked":""}${sk||!canWrite?" disabled":""}> ${esc(s.name.split(" — ")[0])}${keys.length>1?" ("+esc(plotLabel(k))+")":""}${sk?" — не трябва (фотоволтаици)":dn&&cl.ans?` <span class="hint">${bgShort(cl.ans)}</span>`:""}</label>`}).join("")).join("")}</div>`;
 }
 function commonPanel(id,p,ro){

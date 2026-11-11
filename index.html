@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111171051">
+<meta name="pt-build" content="20261111171138">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -205,7 +205,7 @@ table.st td.mono{white-space:nowrap}
 .spbox{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
 .spbox.on{border-color:var(--ink)}
 .spbox .cdoc.spt{border:0;border-radius:0;width:100%;background:transparent}
-.spbox.on .cdoc.spt{padding-right:56px}
+.spbox.on .snm{padding-right:44px}
 .spbody{border-top:1px solid var(--line);padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px}
 .sgset{display:flex;align-items:flex-end;gap:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--sunk)} .sgset .f{flex:1;min-width:0}
 .trash{width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;flex:none}
@@ -1129,7 +1129,7 @@ function editor(id,p,today){
   if(!sel||sel.id!==id||!stepByKey(p,sel.key)||!keys.includes(sel.k))sel=null;
   let h=`<div class="ed" data-id="${esc(id)}">`;
   if(gopen===id){h+=`<div class="gset">
-  <div class="prio"><span>Спешност</span>${PRIOS.map(([v,t])=>`<button class="pdot pr-${v||"none"}${(p.prio||"")===v?" on":""}" data-prio="${v}" aria-label="${t}" aria-pressed="${(p.prio||"")===v}"${ro}></button>`).join("")}</div>
+  <div class="prio"><span>Приоритет</span>${PRIOS.map(([v,t])=>`<button class="pdot pr-${v||"none"}${(p.prio||"")===v?" on":""}" data-prio="${v}" aria-label="${t}" aria-pressed="${(p.prio||"")===v}"${ro}></button>`).join("")}</div>
   <div class="grid4">
     <label class="f">Клиент<input type="text" id="cl-${esc(id)}" data-f="client" value="${esc(p.client)}"${ro}></label>
     <label class="f">Телефон<input type="tel" id="ct-${esc(id)}" data-f="phone" value="${esc(p.phone)}"${ro}></label>

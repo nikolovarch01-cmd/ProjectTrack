@@ -748,7 +748,7 @@ async function recordDevice(){
     const g=await gh(dpath(path)+"?ref="+BR,{cache:"no-store"},session.data);
     if(g.status===404&&dev.rec){devDel();sessionStop("Достъпът от това устройство е спрян. Поискай нов линк.");return}
     let cur=null;if(g.ok){const j=await g.json();shas[path]=j.sha;cur=JSON.parse(td.decode(b64u8(j.content.replace(/\s/g,""))))}
-    const today=todayStr();
+    const today=todayStr();if(cur&&cur.last===today&&cur.name===session.name)return; /* once a day is enough now that it opens fast */
     const ua=navigator.userAgent||"";const kind=/iPhone|iPad|Android|Mobile/i.test(ua)?"телефон":"компютър";
     const nav=(performance.getEntriesByType&&performance.getEntriesByType("navigation")[0])||{};
     const open={at:new Date().toISOString(),early:perf.early||null,net:perf.net||null,html:Math.round(nav.responseEnd||0),

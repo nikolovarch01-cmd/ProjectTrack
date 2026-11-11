@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111155422">
+<meta name="pt-build" content="20261111160235">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -146,6 +146,14 @@ table.st td.mono{white-space:nowrap}
 .plots{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .plot{display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px 4px 4px 10px}
 .plot b{font-family:var(--f-mono);font-weight:500}
+.plot.pcard{display:grid}
+/* project data behind the gear (his word 2026-11-11) */
+.card-head{position:relative}
+.card.on .card-head{padding-right:56px}
+.gear{position:absolute;top:8px;right:8px;width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:10px;background:transparent;border:1px solid transparent;color:var(--muted)}
+.gear[aria-pressed="true"]{background:var(--sunk);border-color:var(--line);color:var(--ink)}
+.gear svg{width:22px;height:22px}
+.gset{display:flex;flex-direction:column;gap:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 .mx-wrap{overflow-x:auto;max-width:100%}
 .mx{border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:10px}
 .mx th,.mx td{border-bottom:1px solid var(--line);padding:4px 6px;text-align:center;white-space:nowrap;vertical-align:middle}
@@ -510,6 +518,7 @@ function engOptions(s){
 /* attached scans / photos / PDFs: kept in the artifact's file store, the row keeps only the id */
 /* icons, not words, for adding a paper (his word 2026-11-11) */
 const ICON_UP=`<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>`;
+const ICON_GEAR=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
 const ICON_CAM=`<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
 function filesBlock(files,ro,owner){
   let h=`<div class="files">`;
@@ -877,7 +886,7 @@ function flush(id){
 }
 
 /* ---------- view state ---------- */
-let filter="all", open=null, sel=null, dsel=null, csel=null, copen=null, confirmDel=null, confirmPlot=null, query="";
+let filter="all", open=null, sel=null, dsel=null, csel=null, copen=null, gopen=null, confirmDel=null, confirmPlot=null, query="";
 try{const f=localStorage.getItem("pt_filter2");if(f)filter=f}catch(e){}
 
 function newProject(){
@@ -1036,10 +1045,11 @@ function card(id,p,today){
   const meta=[p.ident&&p.client?`<span class="mono">${esc(p.ident)}</span>`:"",inv&&!p.client?esc(inv):"",esc(p.address),p.municipality?"общ. "+esc(p.municipality):""].filter(Boolean).join(" · ");
   const lines=plotKeys(p).map(k=>{const ph=phase(p,k,today),ls=lastStep(p,k);
     return`<div class="pl"><span class="mono">${esc(plotLabel(k))}</span><span class="pill ${ph.cls}">${esc(ph.text)}</span><span class="last">${ls?esc(ls.t)+` <span class="mono hint">${bgShort(ls.d)}</span>`:"—"}</span></div>`}).join("");
-  let h=`<article class="card" id="c-${esc(id)}">
+  let h=`<article class="card${open===id?" on":""}" id="c-${esc(id)}">
   <div class="card-head row2" data-toggle="${esc(id)}" tabindex="0" role="button" aria-expanded="${open===id}">
     <div style="min-width:0"><div class="name">${esc(pname(p))}${p.closed?' <span class="pill p-ok">приключен</span>':""}</div><div class="meta">${meta}</div></div>
     <div class="pls">${lines}</div>
+    ${open===id?`<button class="gear" data-gear="${esc(id)}" aria-label="Данни на проекта" aria-pressed="${gopen===id}">${ICON_GEAR}</button>`:""}
   </div>`;
   if(open===id)h+=editor(id,p,today);
   return h+"</article>";
@@ -1058,7 +1068,8 @@ function cellButton(p,s,k,today,isSel){
 function editor(id,p,today){
   const ro=canWrite?"":" disabled", keys=plotKeys(p);
   if(!sel||sel.id!==id||!stepByKey(p,sel.key)||!keys.includes(sel.k))sel=null;
-  let h=`<div class="ed" data-id="${esc(id)}">${commonPanel(id,p,ro)}
+  let h=`<div class="ed" data-id="${esc(id)}">`;
+  if(gopen===id){h+=`<div class="gset">
   <div class="grid4">
     <label class="f">Клиент<input type="text" id="cl-${esc(id)}" data-f="client" value="${esc(p.client)}"${ro}></label>
     <label class="f">Телефон на клиента<input type="tel" id="ct-${esc(id)}" data-f="phone" value="${esc(p.phone)}"${ro}></label>
@@ -1073,10 +1084,18 @@ function editor(id,p,today){
       <label class="f">ПИ<input type="text" id="pp-${pk}" data-pi="pi" value="${esc(pi.pi)}" class="mono" placeholder="58445.96.71"${ro}></label>
       <label class="f">Възложител<input type="text" id="pw-${pk}" data-pi="investor" value="${esc(pi.investor)}"${ro}></label>
       <label class="check"><input type="checkbox" id="pv-${pk}" data-pv="${esc(k)}"${p.pvBy&&p.pvBy[k]?" checked":""}${ro}> фотоволтаици (без Енерго Про)</label>${canWrite&&k?`<button class="ghost x${confirmPlot===id+"|"+k?" danger":""}" data-delplot="${esc(k)}" aria-label="Махни парцел ${esc(k)}">${confirmPlot===id+"|"+k?"махни?":"×"}</button>`:""}</div>`});
-  if(canWrite)h+=`<div class="plot" style="padding:4px"><input type="text" id="np-${esc(id)}" placeholder="УПИ, напр. 71" style="width:120px"><button data-addplot="1">Добави парцел</button></div>`;
-  h+=`</div></div>`;
+  if(canWrite)h+=`<div class="plot" style="padding:4px"><input type="text" id="np-${esc(id)}" placeholder="УПИ" style="width:120px"><button data-addplot="1">Добави парцел</button></div>`;
+  h+=`</div></div>
+  <label class="f" style="max-width:280px">Проектант<input type="text" id="ar-${esc(id)}" data-f="architect" value="${esc(p.architect)}" placeholder="арх. …"${ro}></label>
+  <label class="check"><input type="checkbox" id="cz-${esc(id)}" data-f="closed"${p.closed?" checked":""}${ro}> Проектът е приключен</label>`;
+  if(canWrite){
+    h+=confirmDel===id?`<div class="confirm">Да изтрия ли „${esc(pname(p))}“? Не може да се върне.<button class="danger" data-delyes="1">Изтрий</button><button data-delno="1">Откажи</button></div>`
+      :`<div class="row end"><button class="ghost danger" data-del="1">Изтрий проекта</button></div>`;
+  }
+  h+=`</div>`}
+  h+=commonPanel(id,p,ro);
 
-  h+=`<div><h2 style="margin-bottom:6px">Архитектура</h2><label class="f" style="max-width:280px;margin-bottom:8px">Проектант<input type="text" id="ar-${esc(id)}" data-f="architect" value="${esc(p.architect)}" placeholder="арх. …"${ro}></label><div class="arch">`;
+  h+=`<div><h2 style="margin-bottom:6px">Архитектура</h2><div class="arch">`;
   keys.forEach(k=>{const a=archOf(p,k),ai=ARCH_ORDER.indexOf(a.stage||"not"),pk=esc(id)+"-"+esc(k);
     h+=`<div class="archc" data-arch="${esc(k)}"><div class="ttl">${esc(plotLabel(k))}</div>
       <div class="stage">${ARCH_ORDER.slice(1).map((x,j)=>`<i class="${j<ai?"on":""}" title="${esc(ARCH_TEXT[x])}"></i>`).join("")}</div>
@@ -1124,12 +1143,7 @@ function editor(id,p,today){
   {const lg=(p.log||[]).slice().reverse();
     h+=`<div><h2 style="margin-bottom:6px">Дневник</h2>${lg.length?`<div class="mx-wrap" style="max-height:260px;overflow-y:auto"><table class="st"><tbody>${lg.slice(0,100).map(x=>`<tr><td class="mono" style="width:90px">${bg(x.d)}</td><td>${esc(x.t)}</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty">—</div>`}
     ${canWrite?`<div class="row" style="margin-top:6px"><input type="text" id="lg-${esc(id)}" placeholder="запис в дневника (разговор, решение)" style="max-width:420px"><button data-logadd="1">Запиши</button></div>`:""}</div>`}
-  h+=`<label class="f">Бележки по проекта<textarea id="no-${esc(id)}" data-f="note"${ro}>${esc(p.note)}</textarea></label>
-  <label class="check"><input type="checkbox" id="cz-${esc(id)}" data-f="closed"${p.closed?" checked":""}${ro}> Проектът е приключен</label>`;
-  if(canWrite){
-    h+=confirmDel===id?`<div class="confirm">Да изтрия ли „${esc(pname(p))}“? Не може да се върне.<button class="danger" data-delyes="1">Изтрий</button><button data-delno="1">Откажи</button></div>`
-      :`<div class="row end"><span class="hint">Записва се само.</span><button class="ghost danger" data-del="1">Изтрий проекта</button></div>`;
-  }
+  h+=`<label class="f">Бележки по проекта<textarea id="no-${esc(id)}" data-f="note"${ro}>${esc(p.note)}</textarea></label>`;
   return h+"</div>";
 }
 function commonApprovals(p,c){
@@ -1244,8 +1258,9 @@ document.addEventListener("click",e=>{
   if(t.dataset.pdel){if(!canWrite)return;const pid=t.dataset.pdel;if(confirmPerson!==pid){confirmPerson=pid;renderPeople();return}
     confirmPerson=null;delete people[pid];peopleStore.del(pid).catch(()=>{});render();return}
   if(t.dataset.goto){const[id,key,k]=t.dataset.goto.split("|");open=id;sel=key?{id,key,k}:null;view="main";try{localStorage.setItem("pt_view",view)}catch(_){}render();const c=document.getElementById("c-"+id);const ce=c&&c.querySelector(".cedit");(ce||c)&&(ce||c).scrollIntoView({behavior:"smooth",block:"center"});return}
-  if(t.dataset.toggle){open=open===t.dataset.toggle?null:t.dataset.toggle;confirmDel=null;confirmPlot=null;sel=null;render();return}
-  if(t.id==="add"){if(!canWrite)return;const id=store.newId();projects[id]=newProject();open=id;sel=null;filter="all";query="";$("#search").value="";flush(id);render();
+  if(t.dataset.gear){gopen=gopen===t.dataset.gear?null:t.dataset.gear;confirmDel=null;confirmPlot=null;render();return}
+  if(t.dataset.toggle){open=open===t.dataset.toggle?null:t.dataset.toggle;gopen=null;confirmDel=null;confirmPlot=null;sel=null;render();return}
+  if(t.id==="add"){if(!canWrite)return;const id=store.newId();projects[id]=newProject();open=id;gopen=id;sel=null;filter="all";query="";$("#search").value="";flush(id);render();
     setTimeout(()=>{const i=document.getElementById("cl-"+id);if(i){i.focus();i.scrollIntoView({block:"center"})}},50);return}
   const ed=t.closest(".ed");if(!ed)return;
   const id=ed.dataset.id,p=projects[id];if(!p)return;

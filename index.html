@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111163353">
+<meta name="pt-build" content="20261111163551">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -313,7 +313,9 @@ table.st td.mono{white-space:nowrap}
 const STATES=[["not","Не е почната"],["filed","Пусната"],["waiting","Чака отговор"],["remarks","Забележки за поправка"],["done","Готово"]];
 const UNITS=[["d","дни"],["w","седм."],["m","мес."]];
 /* specialities for Avren (his drawing 71/76, 2026-11-10); Varna may also ask for OVK, fire safety */
-const AVREN_SPECS=["Конструкции","Ел","ВиК","Геодезия","ПБЗ","Геология","ЕЕ"];
+/* his order (2026-11-11): ... Геодезия, Вертикална планировка, Геология last */
+const AVREN_SPECS=["Конструкции","Ел","ВиК","ПБЗ","ЕЕ","Геодезия","Вертикална планировка","Геология"];
+const SPECS_TAIL=["Геодезия","Вертикална планировка","Геология"];
 const EXTRA_SPECS=["ОВК","Пожарна безопасност"];
 /* a speciality per plot: not handed over -> handed to the engineer -> back with questions -> ready */
 const SPEC_STATES=[["not","не е подадена"],["sent","при инженера"],["back","върната с въпроси"],["ready","готова"]];
@@ -395,6 +397,8 @@ function normalize(p){
   }
   Object.values(p.arch).forEach(a=>{if(a&&ARCH_OLD[a.stage])a.stage=ARCH_OLD[a.stage]});
   p.specs=p.specs.filter(s=>s.name!=="Архитектура");
+  if(!(p.specsV>=2)){if(!p.specs.some(s=>s.name==="Вертикална планировка"))p.specs.push({name:"Вертикална планировка",by:{}});
+    const tail=SPECS_TAIL.map(n=>p.specs.find(s=>s.name===n)).filter(Boolean);p.specs=p.specs.filter(s=>!tail.includes(s)).concat(tail);p.specsV=2}
   p.steps=(p.steps||[]).map(s=>{
     const t=TEMPLATE.find(x=>x.key===s.key);
     if(!s.by){const c={state:s.state||"not",date:s.date||"",reg:"",ans:"",note:s.note||"",remarks:[]};s={key:s.key,name:s.name,from:s.from||"",term:s.term||null,pv:!!s.pv,by:{}};
@@ -896,7 +900,7 @@ let filter="all", open=null, sel=null, dsel=null, csel=null, copen=null, gopen=n
 try{const f=localStorage.getItem("pt_filter2");if(f)filter=f}catch(e){}
 
 function newProject(){
-  return{client:"",ident:"",address:"",municipality:"Аврен",plots:[],pvBy:{},note:"",closed:false,created:new Date().toISOString(),v:MODEL,
+  return{client:"",ident:"",address:"",municipality:"Аврен",plots:[],pvBy:{},note:"",closed:false,created:new Date().toISOString(),v:MODEL,specsV:2,
     specs:AVREN_SPECS.map(n=>({name:n,by:{}})),steps:TEMPLATE.map(stepFromTemplate),docs:DOCS.map(n=>({name:n,by:{}}))};
 }
 function pname(p){return p.client||p.ident||"Без име"}

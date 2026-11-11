@@ -632,7 +632,7 @@ async function pull(){
     devices=nextD;if(view==="users")renderUsers();
     for(const id of Object.keys(nextP)){const p="projects/"+id+".json";if(!seen.has(p)&&!dirty.has(id)&&shas[p]&&!(wroteAt[p]&&Date.now()-wroteAt[p]<90000)){delete nextP[id];delete shas[p];changed=true}}
     for(const id of Object.keys(nextE)){const p="people/"+id+".json";if(!seen.has(p)&&shas[p]&&!(wroteAt[p]&&Date.now()-wroteAt[p]<90000)){delete nextE[id];delete shas[p];changed=true}}
-    if(changed||firstPull){projects=nextP;people=nextE;ready=true;firstPull=false;renderSoon();cacheSave()}
+    if(changed||firstPull){if(firstPull)perf.net=Math.round(performance.now());projects=nextP;people=nextE;ready=true;firstPull=false;renderSoon();cacheSave()}
     hideBanner();
   }catch(e){ready=true;showBanner("Няма връзка с данните ("+esc(e.code||"мрежа")+"). Страницата ще опитва сама.");renderSoon()}
   finally{pulling=false}
@@ -720,7 +720,7 @@ async function boot(){
   /* a known device sees its last copy right away, read-only until GitHub answers */
   let early=false;
   if(dev&&cacheLoad()){early=true;canWrite=false;$("#gate").hidden=true;$("#app").hidden=false;
-    $("#whoName").textContent=dev.name||"";render()}
+    $("#whoName").textContent=dev.name||"";render();perf.early=Math.round(performance.now())}
   try{await loadUsers()}catch(e){if(early){showBanner("Няма връзка. Показвам последното записано на това устройство.");return}
     gateMsg("Няма връзка с GitHub. Опитай пак след малко.");return}
   if(early&&(!usersDoc||!usersDoc.vault||!dev)){$("#app").hidden=true;$("#gate").hidden=false}
@@ -739,15 +739,21 @@ $("#nameForm").addEventListener("submit",async e=>{
   devSet(dev);$("#nameForm").hidden=true;gateMsg("");enterApp();
 });
 /* the device is written once a day into devices/<id>.json: who, phone or computer, first and last day */
+/* opening times of this device, written with its record while we measure the slow phone (2026-11-11) */
+const perf={};
 async function recordDevice(){
+  await new Promise(r=>setTimeout(r,6000));
   const dev=devGet();if(!dev||!session)return;const path="devices/"+dev.dev+".json";
   try{
     const g=await gh(dpath(path)+"?ref="+BR,{cache:"no-store"},session.data);
     if(g.status===404&&dev.rec){devDel();sessionStop("Достъпът от това устройство е спрян. Поискай нов линк.");return}
     let cur=null;if(g.ok){const j=await g.json();shas[path]=j.sha;cur=JSON.parse(td.decode(b64u8(j.content.replace(/\s/g,""))))}
-    const today=todayStr();if(cur&&cur.last===today&&cur.name===session.name)return;
+    const today=todayStr();
     const ua=navigator.userAgent||"";const kind=/iPhone|iPad|Android|Mobile/i.test(ua)?"телефон":"компютър";
-    const rec={name:session.name,kind,admin:!!session.admin,first:cur&&cur.first||today,last:today};
+    const nav=(performance.getEntriesByType&&performance.getEntriesByType("navigation")[0])||{};
+    const open={at:new Date().toISOString(),early:perf.early||null,net:perf.net||null,html:Math.round(nav.responseEnd||0),
+      viaSW:(nav.workerStart||0)>0,app:!!(navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)),ua:ua.slice(0,140)};
+    const rec={name:session.name,kind,admin:!!session.admin,first:cur&&cur.first||today,last:today,opens:[open,...((cur&&cur.opens)||[])].slice(0,10)};
     devices[dev.dev]=rec;await queue(()=>putFile(path,jsonB64(rec),session.name+": device"));
     dev.rec=true;devSet(dev);
   }catch(_){}

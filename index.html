@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111165300">
+<meta name="pt-build" content="20261111165405">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -199,6 +199,8 @@ table.st td.mono{white-space:nowrap}
 .bars{display:grid;grid-template-columns:auto;justify-items:end;gap:3px;flex:none}
 .bar{display:flex;gap:3px} .bar i{width:18px;height:8px;border-radius:2px;background:var(--skip-bg)}
 .bar i.b-o{background:#f29900} .bar i.b-g{background:#1e8e3e} .bar i.b-r{background:#d93025}
+.tick{display:inline-block;width:18px;flex:none;color:#1e8e3e;font-style:normal;font-weight:700;font-size:15px;line-height:1}
+.tick.off{width:0}
 .apl{font-size:10px;color:var(--muted);line-height:1;margin-top:2px}
 .cdoc.spt b{display:flex;align-items:flex-start} .cdoc.spt b .dot{margin-top:5px}
 .card.pr-r{border-left:6px solid #d93025} .card.pr-o{border-left:6px solid #f29900} .card.pr-y{border-left:6px solid #f5d000} .card.pr-g{border-left:6px solid #1e8e3e}
@@ -927,6 +929,7 @@ const SPEC_STEP={not:0,sent:1,back:2,ready:3};
 const AP_ORG={"ВиК":"ВиК","Ел":"Енерго Про"};
 const AP_TEXT={not:"не е внесен",filed:"внесен",ok:"съгласуван",stamped:"заверен"};
 const AP_STEP={not:0,filed:1,ok:2,stamped:3};
+function tick(on){return`<i class="tick${on?"":" off"}">${on?"✓":""}</i>`}
 function bar(n,tot){const c=n>=tot?"g":n>0?"o":"r";let h=`<span class="bar">`;for(let j=0;j<tot;j++)h+=`<i class="${j<n?"b-"+c:""}"></i>`;return h+`</span>`}
 /* sections that fold (Архитектура, Специалности): open ones kept while the page is open */
 const foldOpen=new Set();
@@ -1141,22 +1144,25 @@ function editor(id,p,today){
   h+=`</div>`}
   h+=commonPanel(id,p,ro);
 
-  h+=`${foldOpenTag("arch",id)}<summary><span>${dot(keys.map(k=>ARCH_DOT[archOf(p,k).stage||"not"]||"r"))}Архитектура</span></summary><div class="arch">`;
-  keys.forEach(k=>{const a=archOf(p,k),ai=ARCH_ORDER.indexOf(a.stage||"not"),pk=esc(id)+"-"+esc(k);
-    h+=`<div class="archc" data-arch="${esc(k)}"><div class="ttl">${esc(plotLabel(k))}</div>
-      <div class="stage">${ARCH_ORDER.slice(1).map((x,j)=>`<i class="${j<ai?"on":""}" title="${esc(ARCH_TEXT[x])}"></i>`).join("")}</div>
-      <label class="f wide">Етап<select id="as-${pk}" data-ak="stage"${ro}>${opt(ARCH_STAGES,a.stage||"not")}</select></label>
-      <label class="f wide">Чакаме<select id="aw-${pk}" data-ak="wait"${ro}>${opt(ARCH_WAIT,a.wait||"")}</select></label>
-      <label class="f wide">Бележка<input type="text" id="an-${pk}" data-ak="what" value="${esc(a.what)}"${ro}></label>
-    </div>`});
-  h+=`</div></details>`;
-  /* specialities as tiles; one opens below with its own data (his word 2026-11-11) */
-  if(!ssel||ssel.id!==id||!(p.specs||[])[ssel.i])ssel=null;
-  h+=`${foldOpenTag("specs",id)}<summary><span>${dot((p.specs||[]).map(s=>specDot(s,keys)))}Специалности</span></summary><div class="cdocs sp1">`;
+  /* specialities as rows; Архитектура is the first row (his words 2026-11-11); a green tick = handed over to us */
+  if(!ssel||ssel.id!==id||(ssel.i!=="arch"&&!(p.specs||[])[ssel.i]))ssel=null;
+  const archDone=keys.every(k=>archOf(p,k).stage==="ready"),allDone=archDone&&(p.specs||[]).every(s=>specDot(s,keys)==="g");
+  h+=`${foldOpenTag("specs",id)}<summary><span>${tick(allDone)}Специалности</span></summary><div class="cdocs sp1">`;
+  {const on=ssel&&ssel.i==="arch",an=Math.min(...keys.map(k=>ARCH_ORDER.indexOf(archOf(p,k).stage||"not")));
+    const line=keys.map(k=>{const a=archOf(p,k);return(keys.length>1?plotLabel(k)+": ":"")+ARCH_TEXT[a.stage||"not"]+(a.wait?" · чакаме "+(ARCH_WAIT.find(x=>x[0]===a.wait)||["",""])[1]:"")}).join(", ");
+    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="arch" aria-pressed="${!!on}"><span class="snm"><b>${tick(archDone)}Архитектура</b><span>${esc(line)}${p.architect?" · "+esc(p.architect):""}</span></span><span class="bars">${bar(an,3)}</span></button>`;
+    if(on){h+=`<div class="cedit"><div class="row end"><div class="ttl">Архитектура</div><button class="ghost" data-sclose="1">Затвори</button></div><div class="arch">`;
+      keys.forEach(k=>{const a=archOf(p,k),pk=esc(id)+"-"+esc(k);
+        h+=`<div class="archc" data-arch="${esc(k)}">${keys.length>1?`<div class="ttl">${esc(plotLabel(k))}</div>`:""}
+          <label class="f wide">Етап<select id="as-${pk}" data-ak="stage"${ro}>${opt(ARCH_STAGES,a.stage||"not")}</select></label>
+          <label class="f wide">Чакаме<select id="aw-${pk}" data-ak="wait"${ro}>${opt(ARCH_WAIT,a.wait||"")}</select></label>
+          <label class="f wide">Бележка<input type="text" id="an-${pk}" data-ak="what" value="${esc(a.what)}"${ro}></label>
+        </div>`});
+      h+=`</div></div>`}}
   (p.specs||[]).forEach((s,i)=>{const on=ssel&&ssel.i===i,per=s.eng&&people[s.eng];
     const late=s.due&&s.due<today&&keys.some(k=>((s.by||{})[k]||"not")==="sent");
     const org=AP_ORG[s.name],sn=Math.min(...keys.map(k=>SPEC_STEP[(s.by||{})[k]||"not"])),an=org?Math.min(...keys.map(k=>AP_STEP[((s.ap||{})[k])||"not"])):0;
-    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="${i}" aria-pressed="${!!on}"><span class="snm"><b>${esc(s.name)}</b><span>${esc(specLine(s,keys))}${late?` · <span class="late">закъснява</span>`:""}${per?" · "+esc(per.name||""):""}</span></span>
+    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="${i}" aria-pressed="${!!on}"><span class="snm"><b>${tick(sn===3)}${esc(s.name)}</b><span>${esc(specLine(s,keys))}${late?` · <span class="late">закъснява</span>`:""}${per?" · "+esc(per.name||""):""}</span></span>
       <span class="bars">${bar(sn,3)}${org&&sn===3?`<span class="apl">${esc(org)}</span>${bar(an,3)}`:""}</span></button>`;
     if(on)h+=specEditor(id,p,i,keys,today,ro)});
   if(canWrite)h+=`<span class="cadd"><input type="text" id="ns-${esc(id)}" placeholder="друга специалност"><button data-addspec="1" aria-label="Добави специалност">+</button></span>`;
@@ -1323,7 +1329,7 @@ document.addEventListener("click",e=>{
   if(t.dataset.csel){const i=+t.dataset.csel;csel=csel&&csel.id===id&&csel.i===i?null:{id,i};render();return}
   if(t.dataset.cclose){csel=null;render();return}
   if(t.dataset.prio!==undefined){if(!canWrite)return;p.prio=t.dataset.prio;saveSoon(id);render();return}
-  if(t.dataset.ssel){const i=+t.dataset.ssel;ssel=ssel&&ssel.id===id&&ssel.i===i?null:{id,i};render();return}
+  if(t.dataset.ssel){const i=t.dataset.ssel==="arch"?"arch":+t.dataset.ssel;ssel=ssel&&ssel.id===id&&ssel.i===i?null:{id,i};render();return}
   if(t.dataset.sclose){ssel=null;render();return}
   if(t.dataset.dsel){const[i,k]=t.dataset.dsel.split("|");dsel=dsel&&dsel.i===+i&&dsel.k===k?null:{id,i:+i,k};render();return}
   if(t.dataset.dclose){dsel=null;render();return}

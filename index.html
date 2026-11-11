@@ -197,8 +197,7 @@ table.st td.mono{white-space:nowrap}
   <form id="setupForm" class="gate" style="margin:0" hidden>
     <h2>Първа настройка</h2>
     <label class="f">Твоето име<input id="suName" type="text" autocomplete="username" required></label>
-    <label class="f">Ключ за данните (saglasuvaniya-data)<input id="suData" type="password" autocomplete="off" required></label>
-    <label class="f">Ключ за страницата (saglasuvaniya)<input id="suPage" type="password" autocomplete="off" required></label>
+    <label class="f">Ключ от GitHub<input id="suData" type="password" autocomplete="off" required></label>
     <button class="primary" type="submit">Запиши</button>
   </form>
   <div class="err" id="gateErr"></div>
@@ -700,13 +699,12 @@ async function recordDevice(){
 function sessionStop(t){session=null;clearInterval(pullTimer);$("#app").hidden=true;$("#gate").hidden=false;$("#needLink").hidden=false;gateMsg(t)}
 $("#setupForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  const name=$("#suName").value.trim(),data=$("#suData").value.trim(),page=$("#suPage").value.trim();
+  /* one key for both repos (his „офф какви са тези сложни работи", 2026-11-11) */
+  const name=$("#suName").value.trim(),data=$("#suData").value.trim(),page=data;
   if(!name)return;
   gateMsg("Проверявам ключовете…");
   const d=await gh(`/repos/${GH_OWNER}/${DATA_REPO}`,{},data).catch(()=>null);
-  if(!d||!d.ok){gateMsg("Ключът за данните не отваря saglasuvaniya-data.");return}
-  const pg=await gh(`/repos/${GH_OWNER}/${PAGE_REPO}`,{},page).catch(()=>null);
-  if(!pg||!pg.ok){gateMsg("Ключът за страницата не отваря saglasuvaniya.");return}
+  if(!d||!d.ok){gateMsg("Ключът не отваря saglasuvaniya-data. В GitHub избери и двете: saglasuvaniya и saglasuvaniya-data.");return}
   try{
     const kRaw=crypto.getRandomValues(new Uint8Array(32));
     const me=await makeAdmin(name,kRaw,page);
@@ -715,8 +713,8 @@ $("#setupForm").addEventListener("submit",async e=>{
     await saveUsers(doc,page);
     const old=devGet();devSet({kind:"admin",id:me.id,s:mySecret,name,dev:old&&old.dev||"d"+rnd(9)});
     session={name,admin:true,data,k:u8b64(kRaw),page,dev:devGet().dev};
-    $("#suData").value=$("#suPage").value="";$("#setupForm").hidden=true;gateMsg("");enterApp();
-  }catch(err){gateMsg("Не се записа ("+(err.code||"грешка")+"). Ключът за страницата трябва да може да пише.")}
+    $("#suData").value="";$("#setupForm").hidden=true;gateMsg("");enterApp();
+  }catch(err){gateMsg("Не се записа ("+(err.code||"грешка")+"). В GitHub избери и двете: saglasuvaniya и saglasuvaniya-data, с Contents: Read and write.")}
 });
 $("#logout").addEventListener("click",()=>{devDel();location.reload()});
 

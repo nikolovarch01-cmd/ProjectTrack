@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111165110">
+<meta name="pt-build" content="20261111165300">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -195,7 +195,11 @@ table.st td.mono{white-space:nowrap}
 /* specialities: one per row (his word 2026-11-11), its data opens right under it */
 .cdocs.sp1{grid-template-columns:minmax(0,1fr)!important}
 .sp1 .cdoc.spt{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px}
-.sp1 .cdoc.spt>span{text-align:right}
+.sp1 .snm{display:flex;flex-direction:column;gap:2px;min-width:0}
+.bars{display:grid;grid-template-columns:auto;justify-items:end;gap:3px;flex:none}
+.bar{display:flex;gap:3px} .bar i{width:18px;height:8px;border-radius:2px;background:var(--skip-bg)}
+.bar i.b-o{background:#f29900} .bar i.b-g{background:#1e8e3e} .bar i.b-r{background:#d93025}
+.apl{font-size:10px;color:var(--muted);line-height:1;margin-top:2px}
 .cdoc.spt b{display:flex;align-items:flex-start} .cdoc.spt b .dot{margin-top:5px}
 .card.pr-r{border-left:6px solid #d93025} .card.pr-o{border-left:6px solid #f29900} .card.pr-y{border-left:6px solid #f5d000} .card.pr-g{border-left:6px solid #1e8e3e}
 .prio{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)} .prio span{margin-right:4px}
@@ -917,6 +921,13 @@ function dot(list){const c=!list.length?"r":list.every(x=>x==="g")?"g":list.ever
 function specLine(s,keys){const v=keys.map(k=>(s.by||{})[k]||"not");
   return keys.length>1?keys.map((k,j)=>plotLabel(k)+": "+SPEC_TEXT[v[j]]).join(", "):SPEC_TEXT[v[0]]}
 let ssel=null;
+/* speciality progress bar (his word 2026-11-11): 3 cells after the name; when ВиК / Ел is ready a second bar
+   under it counts the approval at ВиК / Енерго Про: внесен, съгласуван, заверен (stored in s.ap[plot]) */
+const SPEC_STEP={not:0,sent:1,back:2,ready:3};
+const AP_ORG={"ВиК":"ВиК","Ел":"Енерго Про"};
+const AP_TEXT={not:"не е внесен",filed:"внесен",ok:"съгласуван",stamped:"заверен"};
+const AP_STEP={not:0,filed:1,ok:2,stamped:3};
+function bar(n,tot){const c=n>=tot?"g":n>0?"o":"r";let h=`<span class="bar">`;for(let j=0;j<tot;j++)h+=`<i class="${j<n?"b-"+c:""}"></i>`;return h+`</span>`}
 /* sections that fold (Архитектура, Специалности): open ones kept while the page is open */
 const foldOpen=new Set();
 function foldOpenTag(key,id){const f=key+"|"+id;return`<details class="fold" data-fold="${esc(f)}"${foldOpen.has(f)?" open":""}>`}
@@ -1144,7 +1155,9 @@ function editor(id,p,today){
   h+=`${foldOpenTag("specs",id)}<summary><span>${dot((p.specs||[]).map(s=>specDot(s,keys)))}Специалности</span></summary><div class="cdocs sp1">`;
   (p.specs||[]).forEach((s,i)=>{const on=ssel&&ssel.i===i,per=s.eng&&people[s.eng];
     const late=s.due&&s.due<today&&keys.some(k=>((s.by||{})[k]||"not")==="sent");
-    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="${i}" aria-pressed="${!!on}"><b>${dot([specDot(s,keys)])}${esc(s.name)}</b><span>${esc(specLine(s,keys))}${late?` · <span class="late">закъснява</span>`:""}${per?" · "+esc(per.name||""):""}</span></button>`;
+    const org=AP_ORG[s.name],sn=Math.min(...keys.map(k=>SPEC_STEP[(s.by||{})[k]||"not"])),an=org?Math.min(...keys.map(k=>AP_STEP[((s.ap||{})[k])||"not"])):0;
+    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="${i}" aria-pressed="${!!on}"><span class="snm"><b>${esc(s.name)}</b><span>${esc(specLine(s,keys))}${late?` · <span class="late">закъснява</span>`:""}${per?" · "+esc(per.name||""):""}</span></span>
+      <span class="bars">${bar(sn,3)}${org&&sn===3?`<span class="apl">${esc(org)}</span>${bar(an,3)}`:""}</span></button>`;
     if(on)h+=specEditor(id,p,i,keys,today,ro)});
   if(canWrite)h+=`<span class="cadd"><input type="text" id="ns-${esc(id)}" placeholder="друга специалност"><button data-addspec="1" aria-label="Добави специалност">+</button></span>`;
   h+=`</div>`;
@@ -1154,12 +1167,13 @@ function editor(id,p,today){
   function specEditor(id,p,i,keys,today,ro){const s=p.specs[i],per=s.eng&&people[s.eng],sp=esc(id)+"-s"+i;
     const late=s.due&&s.due<today&&keys.some(k=>((s.by||{})[k]||"not")==="sent");
     return`<div class="cedit">
-      <div class="row end"><div class="ttl">${dot([specDot(s,keys)])}${esc(s.name)}</div><span>${canWrite?`<button class="ghost danger" data-delspec="${i}">Махни</button>`:""}<button class="ghost" data-sclose="1">Затвори</button></span></div>
+      <div class="row end"><div class="ttl">${esc(s.name)}</div><span>${canWrite?`<button class="ghost danger" data-delspec="${i}">Махни</button>`:""}<button class="ghost" data-sclose="1">Затвори</button></span></div>
       <div class="cgrid">
         ${keys.map(k=>`<label class="f wh">${keys.length>1?esc(plotLabel(k)):"Състояние"}<select id="sst-${sp}-${esc(k)}" data-sstate="${i}|${esc(k)}"${ro}>${opt(Object.entries(SPEC_TEXT),(s.by||{})[k]||"not")}</select></label>`).join("")}
         <label class="f wh">Инженер<select id="se-${sp}" data-si="${i}" data-sk="eng"${ro}>${engOptions(s)}</select></label>
         <label class="f">Подадена<input type="date" id="ss-${sp}" data-si="${i}" data-sk="sent" value="${esc(s.sent)}"${ro}></label>
         <label class="f">Срок<input type="date" id="sd-${sp}" data-si="${i}" data-sk="due" value="${esc(s.due)}"${late?' style="border-color:var(--late);color:var(--late)"':""}${ro}></label>
+        ${AP_ORG[s.name]?keys.map(k=>`<label class="f wh">${esc(AP_ORG[s.name])}${keys.length>1?" "+esc(plotLabel(k)):""}<select id="sap-${sp}-${esc(k)}" data-sap="${i}|${esc(k)}"${ro}>${opt(Object.entries(AP_TEXT),((s.ap||{})[k])||"not")}</select></label>`).join(""):""}
       </div>
       ${per&&per.phone?`<a class="tel" href="tel:${esc(per.phone.replace(/\s/g,""))}">${esc(per.phone)}</a>`:""}
     </div>`}
@@ -1363,6 +1377,8 @@ function onField(e){
     if(t.dataset.cc==="place"){setPlace(c,t.value);logIt(p,"",c.name+": "+(t.value||NOT_HERE))}else c[t.dataset.cc]=t.value;saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
   if(t.dataset.dc){const ce=t.closest(".cedit");const d=p.docs[+ce.dataset.doc],k=ce.dataset.k;if(!d)return;d.by=d.by||{};const c=d.by[k]=d.by[k]||{have:"no",where:"",date:"",note:""};
     if(t.dataset.dc==="place"){setPlace(c,t.value);logIt(p,k,d.name+": "+(t.value||NOT_HERE))}else c[t.dataset.dc]=t.value;saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
+  if(t.dataset.sap){const[i,k]=t.dataset.sap.split("|");const s=p.specs[+i];if(!s)return;s.ap=s.ap||{};
+    if(t.value==="not")delete s.ap[k];else s.ap[k]=t.value;logIt(p,k,s.name+": "+AP_ORG[s.name]+" "+AP_TEXT[t.value]);saveSoon(id);render();return}
   if(t.dataset.sstate){const[i,k]=t.dataset.sstate.split("|");const s=p.specs[+i];if(!s)return;s.by=s.by||{};
     if(t.value==="not")delete s.by[k];else s.by[k]=t.value;logIt(p,k,s.name+": "+SPEC_TEXT[t.value]);saveSoon(id);render();return}
   if(t.dataset.si!==undefined){const s=p.specs[+t.dataset.si];if(!s)return;

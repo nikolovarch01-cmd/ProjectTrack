@@ -54,6 +54,14 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mu
 /* feels like an app on the phone: no bounce, no zoom, no blue flash on tap (like the assembly app) */
 html,body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
 button,.card-head,.fadd{-webkit-user-select:none;user-select:none;touch-action:manipulation}
+/* phone: the page is pinned to the screen like the assembly app - no sliding sideways, no zoom;
+   only the list scrolls up and down; the PC keeps the normal browser behaviour */
+@media (pointer:coarse){
+  html{position:fixed;inset:0;overflow:hidden;width:100%;height:100%}
+  body{position:absolute;inset:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;touch-action:pan-x pan-y}
+  input,select,textarea{font-size:16px}
+}
 .top .right{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .today{color:var(--muted);font-size:13px}
 #search{width:240px;max-width:100%}
@@ -1242,5 +1250,11 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEv=e
 window.addEventListener("appinstalled",()=>{$("#installBtn").hidden=true});
 $("#installBtn").addEventListener("click",async()=>{if(!installEv)return;installEv.prompt();try{await installEv.userChoice}catch(_){}installEv=null;$("#installBtn").hidden=true});
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+/* iPhone ignores "no zoom" in the viewport line - stop the pinch and double-tap zoom by hand */
+if(matchMedia("(pointer:coarse)").matches){
+  ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+  document.addEventListener("touchmove",e=>{if(e.touches&&e.touches.length>1)e.preventDefault()},{passive:false});
+  let lastTap=0;document.addEventListener("touchend",e=>{const n=Date.now();if(n-lastTap<300&&!e.target.closest("input,textarea,select"))e.preventDefault();lastTap=n},{passive:false});
+}
 boot();
 </script>

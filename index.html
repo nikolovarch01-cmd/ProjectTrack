@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111164734">
+<meta name="pt-build" content="20261111165110">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -192,7 +192,16 @@ table.st td.mono{white-space:nowrap}
 .cdoc.sel{border-color:var(--ink)} .cdoc .nf{opacity:.75}
 .cdoc.spt{background:var(--surface);border-color:var(--line);color:var(--muted)} .cdoc.spt b{color:var(--ink)} .cdoc.spt.sel{border-color:var(--ink)}
 .cdoc .late{color:var(--late);font-weight:600}
+/* specialities: one per row (his word 2026-11-11), its data opens right under it */
+.cdocs.sp1{grid-template-columns:minmax(0,1fr)!important}
+.sp1 .cdoc.spt{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px}
+.sp1 .cdoc.spt>span{text-align:right}
 .cdoc.spt b{display:flex;align-items:flex-start} .cdoc.spt b .dot{margin-top:5px}
+.card.pr-r{border-left:6px solid #d93025} .card.pr-o{border-left:6px solid #f29900} .card.pr-y{border-left:6px solid #f5d000} .card.pr-g{border-left:6px solid #1e8e3e}
+.prio{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)} .prio span{margin-right:4px}
+.pdot{width:34px;height:34px;padding:0;border-radius:50%;border:2px solid transparent;box-shadow:inset 0 0 0 3px var(--surface)}
+.pdot.pr-r{background:#d93025} .pdot.pr-o{background:#f29900} .pdot.pr-y{background:#f5d000} .pdot.pr-g{background:#1e8e3e} .pdot.pr-none{background:var(--sunk);border-color:var(--line)}
+.pdot.on{border-color:var(--ink)}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:1px;flex:none}
 .dot.d-r{background:#d93025} .dot.d-o{background:#f29900} .dot.d-g{background:#1e8e3e}
 .capp{display:flex;flex-direction:column;align-items:flex-start;gap:6px} .capp .capt{font-size:12px;font-weight:600;color:var(--muted)} .capp .check{font-size:14px} .capp .off{color:var(--faint)}
@@ -898,6 +907,9 @@ function flush(id){
 }
 
 /* ---------- view state ---------- */
+/* project urgency set by hand (his word 2026-11-11): red on top, then orange, yellow, green, none */
+const PRIOS=[["r","спешно"],["o","оранжево"],["y","жълто"],["g","не бърза"],["","без цвят"]];
+const PRIO_RANK={r:0,o:1,y:2,g:3,"":4};
 /* status dot (his word 2026-11-11): red = not started, orange = under way, green = done */
 const ARCH_DOT={not:"r",idea:"o",tech:"o",ready:"g"};
 function specDot(s,keys){const v=keys.map(k=>(s.by||{})[k]||"not");return v.every(x=>x==="ready")?"g":v.every(x=>x==="not")?"r":"o"}
@@ -1023,7 +1035,7 @@ function renderList(){
   const showClosed=$("#showClosed").checked;
   let ids=Object.keys(projects).filter(id=>showClosed||!projects[id].closed).filter(id=>matches(projects[id]));
   ids.sort((a,b)=>{const A=projects[a],B=projects[b],ca=counts(A,a,today),cb=counts(B,b,today);
-    return(A.closed-B.closed)||(cb.late-ca.late)||(cb.soon-ca.soon)||(cb.fix-ca.fix)||(cb.go-ca.go)||String(B.created||"").localeCompare(String(A.created||""))});
+    return(A.closed-B.closed)||(PRIO_RANK[A.prio||""]-PRIO_RANK[B.prio||""])||(cb.late-ca.late)||(cb.soon-ca.soon)||(cb.fix-ca.fix)||(cb.go-ca.go)||String(B.created||"").localeCompare(String(A.created||""))});
   $("#listTitle").textContent="Проекти";
   if(!ids.length){
     $("#list").innerHTML=Object.keys(projects).length?'<div class="empty">Няма проекти по този избор.</div>'
@@ -1067,7 +1079,7 @@ function card(id,p,today){
   const meta=[p.ident&&p.client?`<span class="mono">${esc(p.ident)}</span>`:"",inv&&!p.client?esc(inv):"",esc(p.address),p.municipality?"общ. "+esc(p.municipality):""].filter(Boolean).join(" · ");
   const lines=plotKeys(p).map(k=>{const ph=phase(p,k,today),ls=lastStep(p,k);
     return`<div class="pl"><span class="mono">${esc(plotLabel(k))}</span><span class="pill ${ph.cls}">${esc(ph.text)}</span><span class="last">${ls?esc(ls.t)+` <span class="mono hint">${bgShort(ls.d)}</span>`:"—"}</span></div>`}).join("");
-  let h=`<article class="card${open===id?" on":""}" id="c-${esc(id)}">
+  let h=`<article class="card${open===id?" on":""}${p.prio?" pr-"+esc(p.prio):""}" id="c-${esc(id)}">
   <div class="card-head row2" data-toggle="${esc(id)}" tabindex="0" role="button" aria-expanded="${open===id}">
     <div style="min-width:0"><div class="name">${esc(pname(p))}${p.closed?' <span class="pill p-ok">приключен</span>':""}</div><div class="meta">${meta}</div></div>
     <div class="pls">${lines}</div>
@@ -1092,6 +1104,7 @@ function editor(id,p,today){
   if(!sel||sel.id!==id||!stepByKey(p,sel.key)||!keys.includes(sel.k))sel=null;
   let h=`<div class="ed" data-id="${esc(id)}">`;
   if(gopen===id){h+=`<div class="gset">
+  <div class="prio"><span>Спешност</span>${PRIOS.map(([v,t])=>`<button class="pdot pr-${v||"none"}${(p.prio||"")===v?" on":""}" data-prio="${v}" aria-label="${t}" aria-pressed="${(p.prio||"")===v}"${ro}></button>`).join("")}</div>
   <div class="grid4">
     <label class="f">Клиент<input type="text" id="cl-${esc(id)}" data-f="client" value="${esc(p.client)}"${ro}></label>
     <label class="f">Телефон<input type="tel" id="ct-${esc(id)}" data-f="phone" value="${esc(p.phone)}"${ro}></label>
@@ -1128,15 +1141,19 @@ function editor(id,p,today){
   h+=`</div></details>`;
   /* specialities as tiles; one opens below with its own data (his word 2026-11-11) */
   if(!ssel||ssel.id!==id||!(p.specs||[])[ssel.i])ssel=null;
-  h+=`${foldOpenTag("specs",id)}<summary><span>${dot((p.specs||[]).map(s=>specDot(s,keys)))}Специалности</span></summary><div class="cdocs">`;
+  h+=`${foldOpenTag("specs",id)}<summary><span>${dot((p.specs||[]).map(s=>specDot(s,keys)))}Специалности</span></summary><div class="cdocs sp1">`;
   (p.specs||[]).forEach((s,i)=>{const on=ssel&&ssel.i===i,per=s.eng&&people[s.eng];
     const late=s.due&&s.due<today&&keys.some(k=>((s.by||{})[k]||"not")==="sent");
-    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="${i}" aria-pressed="${!!on}"><b>${dot([specDot(s,keys)])}${esc(s.name)}</b><span>${esc(specLine(s,keys))}${late?` · <span class="late">закъснява</span>`:""}${per?" · "+esc(per.name||""):""}</span></button>`});
+    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="${i}" aria-pressed="${!!on}"><b>${dot([specDot(s,keys)])}${esc(s.name)}</b><span>${esc(specLine(s,keys))}${late?` · <span class="late">закъснява</span>`:""}${per?" · "+esc(per.name||""):""}</span></button>`;
+    if(on)h+=specEditor(id,p,i,keys,today,ro)});
   if(canWrite)h+=`<span class="cadd"><input type="text" id="ns-${esc(id)}" placeholder="друга специалност"><button data-addspec="1" aria-label="Добави специалност">+</button></span>`;
   h+=`</div>`;
-  if(ssel){const i=ssel.i,s=p.specs[i],per=s.eng&&people[s.eng],sp=esc(id)+"-s"+i;
+  if(canWrite){const ex=EXTRA_SPECS.filter(n=>!(p.specs||[]).some(s=>s.name===n));
+    if(ex.length)h+=`<div class="row">${ex.map(n=>`<button data-quickspec="${esc(n)}">+ ${esc(n)}</button>`).join("")}</div>`}
+  h+=`</details>`;
+  function specEditor(id,p,i,keys,today,ro){const s=p.specs[i],per=s.eng&&people[s.eng],sp=esc(id)+"-s"+i;
     const late=s.due&&s.due<today&&keys.some(k=>((s.by||{})[k]||"not")==="sent");
-    h+=`<div class="cedit">
+    return`<div class="cedit">
       <div class="row end"><div class="ttl">${dot([specDot(s,keys)])}${esc(s.name)}</div><span>${canWrite?`<button class="ghost danger" data-delspec="${i}">Махни</button>`:""}<button class="ghost" data-sclose="1">Затвори</button></span></div>
       <div class="cgrid">
         ${keys.map(k=>`<label class="f wh">${keys.length>1?esc(plotLabel(k)):"Състояние"}<select id="sst-${sp}-${esc(k)}" data-sstate="${i}|${esc(k)}"${ro}>${opt(Object.entries(SPEC_TEXT),(s.by||{})[k]||"not")}</select></label>`).join("")}
@@ -1146,9 +1163,6 @@ function editor(id,p,today){
       </div>
       ${per&&per.phone?`<a class="tel" href="tel:${esc(per.phone.replace(/\s/g,""))}">${esc(per.phone)}</a>`:""}
     </div>`}
-  if(canWrite){const ex=EXTRA_SPECS.filter(n=>!(p.specs||[]).some(s=>s.name===n));
-    if(ex.length)h+=`<div class="row">${ex.map(n=>`<button data-quickspec="${esc(n)}">+ ${esc(n)}</button>`).join("")}</div>`}
-  h+=`</details>`;
 
   h+=`<div><h2 style="margin-bottom:6px">Съгласувания</h2><div class="mx-wrap"><table class="mx"><thead><tr><th class="sn">Стъпка</th>`;
   keys.forEach(k=>{h+=`<th class="mono">${esc(plotLabel(k))}</th>`});
@@ -1294,6 +1308,7 @@ document.addEventListener("click",e=>{
   if(t.dataset.selclose){sel=null;render();return}
   if(t.dataset.csel){const i=+t.dataset.csel;csel=csel&&csel.id===id&&csel.i===i?null:{id,i};render();return}
   if(t.dataset.cclose){csel=null;render();return}
+  if(t.dataset.prio!==undefined){if(!canWrite)return;p.prio=t.dataset.prio;saveSoon(id);render();return}
   if(t.dataset.ssel){const i=+t.dataset.ssel;ssel=ssel&&ssel.id===id&&ssel.i===i?null:{id,i};render();return}
   if(t.dataset.sclose){ssel=null;render();return}
   if(t.dataset.dsel){const[i,k]=t.dataset.dsel.split("|");dsel=dsel&&dsel.i===+i&&dsel.k===k?null:{id,i:+i,k};render();return}

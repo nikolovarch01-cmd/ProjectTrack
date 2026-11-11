@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111163551">
+<meta name="pt-build" content="20261111164559">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -190,6 +190,10 @@ table.st td.mono{white-space:nowrap}
 .cdoc.h-no{background:var(--late-bg);color:var(--late)} .cdoc.h-asked{background:var(--soon-bg);color:var(--soon)}
 .cdoc.h-orig{background:var(--ok-bg);color:var(--ok)} .cdoc.h-copy{background:var(--accent-bg);color:var(--accent)}
 .cdoc.sel{border-color:var(--ink)} .cdoc .nf{opacity:.75}
+.cdoc.spt{background:var(--surface);border-color:var(--line);color:var(--muted)} .cdoc.spt b{color:var(--ink)} .cdoc.spt.sel{border-color:var(--ink)}
+.cdoc .late{color:var(--late);font-weight:600}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:1px;flex:none}
+.dot.d-r{background:var(--late)} .dot.d-o{background:var(--soon)} .dot.d-g{background:var(--ok)}
 .capp{display:flex;flex-direction:column;align-items:flex-start;gap:6px} .capp .capt{font-size:12px;font-weight:600;color:var(--muted)} .capp .check{font-size:14px} .capp .off{color:var(--faint)}
 .cadd{display:flex;gap:4px;align-items:center;grid-column:1/-1;max-width:360px} .cadd input{min-width:0}
 .files{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
@@ -893,6 +897,13 @@ function flush(id){
 }
 
 /* ---------- view state ---------- */
+/* status dot (his word 2026-11-11): red = not started, orange = under way, green = done */
+const ARCH_DOT={not:"r",idea:"o",tech:"o",ready:"g"};
+function specDot(s,keys){const v=keys.map(k=>(s.by||{})[k]||"not");return v.every(x=>x==="ready")?"g":v.every(x=>x==="not")?"r":"o"}
+function dot(list){const c=!list.length?"r":list.every(x=>x==="g")?"g":list.every(x=>x==="r")?"r":"o";return`<i class="dot d-${c}"></i>`}
+function specLine(s,keys){const v=keys.map(k=>(s.by||{})[k]||"not");
+  return keys.length>1?keys.map((k,j)=>plotLabel(k)+": "+SPEC_TEXT[v[j]]).join(", "):SPEC_TEXT[v[0]]}
+let ssel=null;
 /* sections that fold (Архитектура, Специалности): open ones kept while the page is open */
 const foldOpen=new Set();
 function foldOpenTag(key,id){const f=key+"|"+id;return`<details class="fold" data-fold="${esc(f)}"${foldOpen.has(f)?" open":""}>`}
@@ -1105,7 +1116,7 @@ function editor(id,p,today){
   h+=`</div>`}
   h+=commonPanel(id,p,ro);
 
-  h+=`${foldOpenTag("arch",id)}<summary>Архитектура</summary><div class="arch">`;
+  h+=`${foldOpenTag("arch",id)}<summary><span>${dot(keys.map(k=>ARCH_DOT[archOf(p,k).stage||"not"]||"r"))}Архитектура</span></summary><div class="arch">`;
   keys.forEach(k=>{const a=archOf(p,k),ai=ARCH_ORDER.indexOf(a.stage||"not"),pk=esc(id)+"-"+esc(k);
     h+=`<div class="archc" data-arch="${esc(k)}"><div class="ttl">${esc(plotLabel(k))}</div>
       <div class="stage">${ARCH_ORDER.slice(1).map((x,j)=>`<i class="${j<ai?"on":""}" title="${esc(ARCH_TEXT[x])}"></i>`).join("")}</div>
@@ -1114,24 +1125,28 @@ function editor(id,p,today){
       <label class="f wide">Бележка<input type="text" id="an-${pk}" data-ak="what" value="${esc(a.what)}"${ro}></label>
     </div>`});
   h+=`</div></details>`;
-  h+=`${foldOpenTag("specs",id)}<summary>Специалности</summary><div class="mx-wrap"><table class="mx"><thead><tr><th class="sn"></th>`;
-  keys.forEach(k=>{h+=`<th class="mono">${esc(plotLabel(k))}</th>`});
-  h+=`<th>Инженер</th><th>Телефон</th><th>Подадена</th><th>Срок от инженера</th></tr></thead><tbody>`;
-  (p.specs||[]).forEach((s,i)=>{
+  /* specialities as tiles; one opens below with its own data (his word 2026-11-11) */
+  if(!ssel||ssel.id!==id||!(p.specs||[])[ssel.i])ssel=null;
+  h+=`${foldOpenTag("specs",id)}<summary><span>${dot((p.specs||[]).map(s=>specDot(s,keys)))}Специалности</span></summary><div class="cdocs">`;
+  (p.specs||[]).forEach((s,i)=>{const on=ssel&&ssel.i===i,per=s.eng&&people[s.eng];
     const late=s.due&&s.due<today&&keys.some(k=>((s.by||{})[k]||"not")==="sent");
-    const per=s.eng&&people[s.eng];
-    h+=`<tr><td class="sn">${esc(s.name)}${canWrite?` <button class="ghost x" data-delspec="${i}" aria-label="Махни ${esc(s.name)}">×</button>`:""}</td>`;
-    keys.forEach(k=>{const v=(s.by||{})[k]||"not";h+=`<td><button class="cell c-${v}" data-cell="${i}" data-plot="${esc(k)}" title="${SPEC_TEXT[v]}" aria-label="${esc(s.name)} ${esc(plotLabel(k))}: ${SPEC_TEXT[v]}"${ro}>${CELL_MARK[v]}</button></td>`});
-    h+=`<td><select id="se-${esc(id)}-${i}" data-si="${i}" data-sk="eng" style="width:170px"${ro}>${engOptions(s)}</select></td>
-      <td>${per&&per.phone?`<a class="tel" href="tel:${esc(per.phone.replace(/\s/g,""))}">${esc(per.phone)}</a>`:`<span class="hint">—</span>`}</td>
-      <td><input type="date" id="ss-${esc(id)}-${i}" data-si="${i}" data-sk="sent" value="${esc(s.sent)}" style="width:150px"${ro}></td>
-      <td><input type="date" id="sd-${esc(id)}-${i}" data-si="${i}" data-sk="due" value="${esc(s.due)}" style="width:150px${late?";border-color:var(--late);color:var(--late)":""}"${ro}></td></tr>`});
-  h+=`</tbody></table></div><div class="hint" style="margin-top:4px">Квадратче при всеки клик: празно (не е подадена) → при инженера → ? (върната с въпроси) → ✓ (готова).</div>`;
-  if(canWrite){
-    h+=`<div class="row" style="margin-top:8px"><input type="text" id="ns-${esc(id)}" placeholder="друга специалност" style="max-width:200px"><button data-addspec="1">Добави</button>`;
-    EXTRA_SPECS.filter(n=>!(p.specs||[]).some(s=>s.name===n)).forEach(n=>{h+=`<button data-quickspec="${esc(n)}">+ ${esc(n)}</button>`});
-    h+=`</div>`;
-  }
+    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="${i}" aria-pressed="${!!on}"><b>${dot([specDot(s,keys)])}${esc(s.name)}</b><span>${esc(specLine(s,keys))}${late?` · <span class="late">закъснява</span>`:""}${per?" · "+esc(per.name||""):""}</span></button>`});
+  if(canWrite)h+=`<span class="cadd"><input type="text" id="ns-${esc(id)}" placeholder="друга специалност"><button data-addspec="1" aria-label="Добави специалност">+</button></span>`;
+  h+=`</div>`;
+  if(ssel){const i=ssel.i,s=p.specs[i],per=s.eng&&people[s.eng],sp=esc(id)+"-s"+i;
+    const late=s.due&&s.due<today&&keys.some(k=>((s.by||{})[k]||"not")==="sent");
+    h+=`<div class="cedit">
+      <div class="row end"><div class="ttl">${dot([specDot(s,keys)])}${esc(s.name)}</div><span>${canWrite?`<button class="ghost danger" data-delspec="${i}">Махни</button>`:""}<button class="ghost" data-sclose="1">Затвори</button></span></div>
+      <div class="cgrid">
+        ${keys.map(k=>`<label class="f wh">${keys.length>1?esc(plotLabel(k)):"Състояние"}<select id="sst-${sp}-${esc(k)}" data-sstate="${i}|${esc(k)}"${ro}>${opt(Object.entries(SPEC_TEXT),(s.by||{})[k]||"not")}</select></label>`).join("")}
+        <label class="f wh">Инженер<select id="se-${sp}" data-si="${i}" data-sk="eng"${ro}>${engOptions(s)}</select></label>
+        <label class="f">Подадена<input type="date" id="ss-${sp}" data-si="${i}" data-sk="sent" value="${esc(s.sent)}"${ro}></label>
+        <label class="f">Срок<input type="date" id="sd-${sp}" data-si="${i}" data-sk="due" value="${esc(s.due)}"${late?' style="border-color:var(--late);color:var(--late)"':""}${ro}></label>
+      </div>
+      ${per&&per.phone?`<a class="tel" href="tel:${esc(per.phone.replace(/\s/g,""))}">${esc(per.phone)}</a>`:""}
+    </div>`}
+  if(canWrite){const ex=EXTRA_SPECS.filter(n=>!(p.specs||[]).some(s=>s.name===n));
+    if(ex.length)h+=`<div class="row">${ex.map(n=>`<button data-quickspec="${esc(n)}">+ ${esc(n)}</button>`).join("")}</div>`}
   h+=`</details>`;
 
   h+=`<div><h2 style="margin-bottom:6px">Съгласувания</h2><div class="mx-wrap"><table class="mx"><thead><tr><th class="sn">Стъпка</th>`;
@@ -1278,6 +1293,8 @@ document.addEventListener("click",e=>{
   if(t.dataset.selclose){sel=null;render();return}
   if(t.dataset.csel){const i=+t.dataset.csel;csel=csel&&csel.id===id&&csel.i===i?null:{id,i};render();return}
   if(t.dataset.cclose){csel=null;render();return}
+  if(t.dataset.ssel){const i=+t.dataset.ssel;ssel=ssel&&ssel.id===id&&ssel.i===i?null:{id,i};render();return}
+  if(t.dataset.sclose){ssel=null;render();return}
   if(t.dataset.dsel){const[i,k]=t.dataset.dsel.split("|");dsel=dsel&&dsel.i===+i&&dsel.k===k?null:{id,i:+i,k};render();return}
   if(t.dataset.dclose){dsel=null;render();return}
   if(!canWrite)return;
@@ -1293,7 +1310,7 @@ document.addEventListener("click",e=>{
   if(t.dataset.adddoc){const i=document.getElementById("nd-"+id);const v=i.value.trim();if(v){p.docs.push({name:v,by:{}});saveSoon(id);i.value="";render()}return}
   if(t.dataset.deldoc!==undefined){p.docs.splice(+t.dataset.deldoc,1);dsel=null;saveSoon(id);render();return}
   if(t.dataset.cell!==undefined){const s=p.specs[+t.dataset.cell];if(!s)return;s.by=s.by||{};const k=t.dataset.plot;const nv=CELL_NEXT[s.by[k]||"not"];if(nv==="not")delete s.by[k];else s.by[k]=nv;logIt(p,k,s.name+": "+SPEC_TEXT[nv]);saveSoon(id);render()}
-  else if(t.dataset.delspec){p.specs.splice(+t.dataset.delspec,1);saveSoon(id);render()}
+  else if(t.dataset.delspec){if(t.dataset.armed!=="1"){t.dataset.armed="1";t.textContent="Махни?";return}p.specs.splice(+t.dataset.delspec,1);ssel=null;saveSoon(id);render()}
   else if(t.dataset.addspec){const i=document.getElementById("ns-"+id);const v=i.value.trim();if(v){p.specs.push({name:v,by:{}});saveSoon(id);i.value="";render()}}
   else if(t.dataset.quickstep){const x=EXTRA_STEPS.find(y=>y.key===t.dataset.quickstep);if(x&&!stepByKey(p,x.key)){const si=p.steps.findIndex(s=>s.key==="supervisor");const st=stepFromTemplate(x);
     p.steps.splice(si<0?p.steps.length:si,0,st);const sup=stepByKey(p,"supervisor");if(sup&&!sup.after.includes(x.key))sup.after.push(x.key);saveSoon(id);render()}}
@@ -1330,6 +1347,8 @@ function onField(e){
     if(t.dataset.cc==="place"){setPlace(c,t.value);logIt(p,"",c.name+": "+(t.value||NOT_HERE))}else c[t.dataset.cc]=t.value;saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
   if(t.dataset.dc){const ce=t.closest(".cedit");const d=p.docs[+ce.dataset.doc],k=ce.dataset.k;if(!d)return;d.by=d.by||{};const c=d.by[k]=d.by[k]||{have:"no",where:"",date:"",note:""};
     if(t.dataset.dc==="place"){setPlace(c,t.value);logIt(p,k,d.name+": "+(t.value||NOT_HERE))}else c[t.dataset.dc]=t.value;saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
+  if(t.dataset.sstate){const[i,k]=t.dataset.sstate.split("|");const s=p.specs[+i];if(!s)return;s.by=s.by||{};
+    if(t.value==="not")delete s.by[k];else s.by[k]=t.value;logIt(p,k,s.name+": "+SPEC_TEXT[t.value]);saveSoon(id);render();return}
   if(t.dataset.si!==undefined){const s=p.specs[+t.dataset.si];if(!s)return;
     if(t.dataset.sk==="eng"&&t.value==="__new"){view="people";try{localStorage.setItem("pt_view",view)}catch(_){}render();const i=document.getElementById("nps");if(i)i.value=s.name;const n=document.getElementById("npn");if(n)n.focus();return}
     s[t.dataset.sk]=t.value;

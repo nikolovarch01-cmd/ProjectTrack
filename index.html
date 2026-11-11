@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111153123">
+<meta name="pt-build" content="20261111154106">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -337,9 +337,13 @@ const MOVED_TO_COMMON={"Нотариален акт":"Нотариален ак�
 /* where a paper must be approved: ticks inside the paper, stored in the approval steps themselves (one truth) */
 const COMMON_STEPS={"Скица-виза":["vik_visa","ep_visa"]};
 const DOCS=["ВиК — изходни данни","ВиК — съгласувана виза","Енерго Про — становище","Енерго Про — съгласувана виза","Геоложки доклад","Геодезическо заснемане","Ситуация","Проект (всички части)","Доклад за ЕЕ (оценка на съответствието)","Доклад за съответствие","Разрешение за строеж"];
-const HAVE=[["no","нямаме"],["asked","поискан"],["orig","оригинал"],["copy","копие"]];
-const HAVE_TEXT={no:"нямаме",asked:"поискан",orig:"оригинал",copy:"копие"};
 const WHERE=["при нас","при клиента","в надзора","в общината","ВиК","Енерго Про","РИОСВ","Кадастър","у проектанта"];
+/* one field for a paper (his word 2026-11-11: „тези могат да бъдат едно"): the place, or „не е налично" (have:"no") */
+const NOT_HERE="не е налично";
+function docPlace(c){return!c||(c.have||"no")==="no"?"":(c.where||"при нас")}
+function placeSelect(id,attr,c,ro){const v=docPlace(c),list=v&&!WHERE.includes(v)?[...WHERE,v]:WHERE;
+  return`<select id="${id}" ${attr}="place"${ro}><option value=""${v?"":" selected"}>${NOT_HERE}</option>${list.map(w=>`<option${w===v?" selected":""}>${esc(w)}</option>`).join("")}</select>`}
+function setPlace(c,v){if(!v){c.have="no";c.where=""}else{c.where=v;if((c.have||"no")==="no"||c.have==="asked")c.have="orig";if(!c.date)c.date=todayStr()}}
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1132,7 +1136,7 @@ function commonPanel(id,p,ro){
   if(!csel||csel.id!==id||!p.common[csel.i])csel=null;
   let h=`<div class="cpanel"><h2>Документи по проекта</h2><div class="cdocs">`;
   p.common.forEach((c,i)=>{const on=csel&&csel.i===i,nf=(c.files||[]).length;
-    h+=`<button class="cdoc h-${c.have||"no"}${on?" sel":""}" data-csel="${i}" aria-pressed="${on}"><b>${esc(c.name)}</b><span>${HAVE_TEXT[c.have]||HAVE_TEXT.no}${c.where?" · "+esc(c.where):""}${nf?` <span class="nf">· ${nf} ${nf===1?"файл":"файла"}</span>`:""}</span></button>`});
+    h+=`<button class="cdoc h-${docPlace(c)?"orig":"no"}${on?" sel":""}" data-csel="${i}" aria-pressed="${on}"><b>${esc(c.name)}</b><span>${esc(docPlace(c)||NOT_HERE)}${nf?` <span class="nf">· ${nf} ${nf===1?"файл":"файла"}</span>`:""}</span></button>`});
   if(canWrite)h+=`<span class="cadd"><input type="text" id="nc-${esc(id)}" placeholder="друг документ"><button data-addcommon="1" aria-label="Добави документ">+</button></span>`;
   h+=`</div>`;
   if(csel){const c=p.common[csel.i],pid=esc(id)+"-c"+csel.i;
@@ -1140,37 +1144,33 @@ function commonPanel(id,p,ro){
       <div class="row end"><div class="ttl">${esc(c.name)}</div><span>${canWrite?`<button class="ghost danger" data-delcommon="${csel.i}">Махни</button>`:""}<button class="ghost" data-cclose="1">Затвори</button></span></div>
       ${filesBlock(c.files,ro,"common")}${commonApprovals(p,c)}
       <div class="cgrid">
-        <label class="f">Имаме ли го<select id="ch-${pid}" data-cc="have"${ro}>${opt(HAVE,c.have||"no")}</select></label>
-        <label class="f">Къде е сега<input type="text" id="cw-${pid}" data-cc="where" list="wheres" value="${esc(c.where)}" placeholder="при нас"${ro}></label>
+        <label class="f">Къде${placeSelect("cw-"+pid,"data-cc",c,ro)}</label>
         <label class="f">От дата<input type="date" id="cd-${pid}" data-cc="date" value="${esc(c.date)}"${ro}></label>
         <label class="f" style="grid-column:span 2">Бележка<input type="text" id="cn-${pid}" data-cc="note" value="${esc(c.note)}"${ro}></label>
       </div>
-      <div class="row">${WHERE.map(w=>`<button class="pill ${c.where===w?"p-wait":"p-not"}" data-cwhere="${esc(w)}"${ro}>${esc(w)}</button>`).join("")}</div>
     </div>`}
   return h+`</div>`;
 }
 function docCell(d,k){return(d.by&&d.by[k])||{have:"no",where:"",date:"",note:""}}
 function docsSection(id,p,keys,ro){
   if(!dsel||dsel.id!==id||!p.docs[dsel.i]||!keys.includes(dsel.k))dsel=null;
-  let h=`<div><h2 style="margin-bottom:6px">Документи — имаме ли ги и къде са</h2><div class="mx-wrap"><table class="mx"><thead><tr><th class="sn">Документ</th>`;
+  let h=`<div><h2 style="margin-bottom:6px">Документи по парцели</h2><div class="mx-wrap"><table class="mx"><thead><tr><th class="sn">Документ</th>`;
   keys.forEach(k=>{h+=`<th class="mono">${esc(plotLabel(k))}</th>`});
   h+=`</tr></thead><tbody>`;
   p.docs.forEach((d,i)=>{
     h+=`<tr><td class="sn">${esc(d.name)}${canWrite?` <button class="ghost x" data-deldoc="${i}" aria-label="Махни ${esc(d.name)}">×</button>`:""}</td>`;
     keys.forEach(k=>{const c=docCell(d,k),on=dsel&&dsel.i===i&&dsel.k===k;
-      h+=`<td><button class="sc h-${c.have}${on?" sel":""}" data-dsel="${i}|${esc(k)}" aria-pressed="${on}"><b>${HAVE_TEXT[c.have]||"нямаме"}</b>${c.where?`<span>${esc(c.where)}</span>`:""}</button></td>`});
+      h+=`<td><button class="sc h-${docPlace(c)?"orig":"no"}${on?" sel":""}" data-dsel="${i}|${esc(k)}" aria-pressed="${on}"><b>${esc(docPlace(c)||NOT_HERE)}</b></button></td>`});
     h+=`</tr>`});
   h+=`</tbody></table></div>`;
   if(dsel){const d=p.docs[dsel.i],c=docCell(d,dsel.k),pid=esc(id)+"-"+dsel.i+"-"+esc(dsel.k);
     h+=`<div class="cedit" style="margin-top:10px" data-doc="${dsel.i}" data-k="${esc(dsel.k)}">
       <div class="row end"><div class="ttl"><span>${esc(plotLabel(dsel.k))}</span>${esc(d.name)}</div><button class="ghost" data-dclose="1">Затвори</button></div>
       <div class="cgrid">
-        <label class="f">Имаме ли го<select id="dh-${pid}" data-dc="have"${ro}>${opt(HAVE,c.have)}</select></label>
-        <label class="f">Къде е сега<input type="text" id="dw-${pid}" data-dc="where" list="wheres" value="${esc(c.where)}" placeholder="при нас"${ro}></label>
+        <label class="f">Къде${placeSelect("dw-"+pid,"data-dc",c,ro)}</label>
         <label class="f">От дата<input type="date" id="dd-${pid}" data-dc="date" value="${esc(c.date)}"${ro}></label>
-        <label class="f" style="grid-column:span 2">Бележка<input type="text" id="dn-${pid}" data-dc="note" value="${esc(c.note)}" placeholder="напр. оригиналът е в папката"${ro}></label>
+        <label class="f" style="grid-column:span 2">Бележка<input type="text" id="dn-${pid}" data-dc="note" value="${esc(c.note)}"${ro}></label>
       </div>
-      <div class="row">${WHERE.map(w=>`<button class="pill ${c.where===w?"p-wait":"p-not"}" data-dwhere="${esc(w)}"${ro}>${esc(w)}</button>`).join("")}</div>
       ${filesBlock(c.files,ro,"doc")}
     </div>`}
   if(canWrite)h+=`<div class="row" style="margin-top:8px"><input type="text" id="nd-${esc(id)}" placeholder="друг документ" style="max-width:260px"><button data-adddoc="1">Добави документ</button></div>`;
@@ -1253,13 +1253,9 @@ document.addEventListener("click",e=>{
     if(t.dataset.armed!=="1"){t.dataset.armed="1";t.textContent="махни?";return}
     const tg=fileTarget(p,t);if(!tg||!tg.files)return;const f=tg.files.splice(+t.dataset.fdel,1)[0];saveSoon(id);render();
     if(f&&assetsNs)assetsNs.delete(f.id).catch(()=>{});return}
-  if(t.dataset.dwhere){const ce=t.closest(".cedit");const d=p.docs[+ce.dataset.doc],k=ce.dataset.k;d.by=d.by||{};const c=d.by[k]=d.by[k]||{have:"no",where:"",date:"",note:""};
-    c.where=t.dataset.dwhere;if(!c.date)c.date=todayStr();if(c.have==="no")c.have="orig";logIt(p,k,d.name+": "+c.where);saveSoon(id);render();return}
   if(t.dataset.addcommon){const i=document.getElementById("nc-"+id);const v=i.value.trim();if(v){p.common=p.common||[];p.common.push({name:v,have:"no",where:"",date:"",note:""});csel={id,i:p.common.length-1};saveSoon(id);i.value="";render()}return}
   if(t.dataset.delcommon!==undefined){if(t.dataset.armed!=="1"){t.dataset.armed="1";t.textContent="махни?";return}
     p.common.splice(+t.dataset.delcommon,1);csel=null;saveSoon(id);render();return}
-  if(t.dataset.cwhere){const c=p.common[+t.closest(".cedit").dataset.common];if(!c)return;c.where=t.dataset.cwhere;if(!c.date)c.date=todayStr();if((c.have||"no")==="no")c.have="orig";
-    logIt(p,"",c.name+": "+c.where);saveSoon(id);render();return}
   if(t.dataset.adddoc){const i=document.getElementById("nd-"+id);const v=i.value.trim();if(v){p.docs.push({name:v,by:{}});saveSoon(id);i.value="";render()}return}
   if(t.dataset.deldoc!==undefined){p.docs.splice(+t.dataset.deldoc,1);dsel=null;saveSoon(id);render();return}
   if(t.dataset.cell!==undefined){const s=p.specs[+t.dataset.cell];if(!s)return;s.by=s.by||{};const k=t.dataset.plot;const nv=CELL_NEXT[s.by[k]||"not"];if(nv==="not")delete s.by[k];else s.by[k]=nv;logIt(p,k,s.name+": "+SPEC_TEXT[nv]);saveSoon(id);render()}
@@ -1296,10 +1292,10 @@ function onField(e){
   if(t.dataset.capp){const[key,k]=t.dataset.capp.split("|");const st=stepByKey(p,key);if(!st)return;const c=ensureCell(st,k);
     if(t.checked){c.state="done";if(!c.ans)c.ans=todayStr()}else{c.state=c.date?"waiting":"not";c.ans=""}
     logIt(p,k,st.name+": "+(t.checked?"съгласувана":"отворена отново"));saveSoon(id);render();return}
-  if(t.dataset.cc){const c=p.common[+t.closest(".cedit").dataset.common];if(!c)return;c[t.dataset.cc]=t.value;
-    if(t.dataset.cc==="have")logIt(p,"",c.name+": "+HAVE_TEXT[t.value]);saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
+  if(t.dataset.cc){const c=p.common[+t.closest(".cedit").dataset.common];if(!c)return;
+    if(t.dataset.cc==="place"){setPlace(c,t.value);logIt(p,"",c.name+": "+(t.value||NOT_HERE))}else c[t.dataset.cc]=t.value;saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
   if(t.dataset.dc){const ce=t.closest(".cedit");const d=p.docs[+ce.dataset.doc],k=ce.dataset.k;if(!d)return;d.by=d.by||{};const c=d.by[k]=d.by[k]||{have:"no",where:"",date:"",note:""};
-    c[t.dataset.dc]=t.value;if(t.dataset.dc==="have")logIt(p,k,d.name+": "+HAVE_TEXT[t.value]);saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
+    if(t.dataset.dc==="place"){setPlace(c,t.value);logIt(p,k,d.name+": "+(t.value||NOT_HERE))}else c[t.dataset.dc]=t.value;saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
   if(t.dataset.si!==undefined){const s=p.specs[+t.dataset.si];if(!s)return;
     if(t.dataset.sk==="eng"&&t.value==="__new"){view="people";try{localStorage.setItem("pt_view",view)}catch(_){}render();const i=document.getElementById("nps");if(i)i.value=s.name;const n=document.getElementById("npn");if(n)n.focus();return}
     s[t.dataset.sk]=t.value;

@@ -176,6 +176,7 @@ table.st td.mono{white-space:nowrap}
 .cdoc.h-no{background:var(--late-bg);color:var(--late)} .cdoc.h-asked{background:var(--soon-bg);color:var(--soon)}
 .cdoc.h-orig{background:var(--ok-bg);color:var(--ok)} .cdoc.h-copy{background:var(--accent-bg);color:var(--accent)}
 .cdoc.sel{border-color:var(--ink)} .cdoc .nf{opacity:.75}
+.capp{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center} .capp .check{font-size:14px} .capp .off{color:var(--faint)}
 .cadd{display:flex;gap:4px;align-items:center;grid-column:1/-1;max-width:360px} .cadd input{min-width:0}
 .files{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
 .file{display:flex;flex-direction:column;gap:2px;width:108px;font-size:12px;position:relative}
@@ -183,7 +184,8 @@ table.st td.mono{white-space:nowrap}
 .fpdf{display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--late);text-decoration:none}
 .fname{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file .x{position:absolute;top:2px;right:2px;background:var(--surface);padding:0 6px}
-.fadd{display:flex;align-items:center;justify-content:center;width:108px;height:80px;border:1px dashed var(--faint);border-radius:6px;font-size:12px;text-align:center;padding:6px;cursor:pointer;color:var(--accent)}
+.fmv{position:absolute;left:0;bottom:-2px;display:flex;gap:2px} .fmv button{padding:0 8px;font-size:18px;line-height:1}
+.fadd{display:flex;align-items:center;justify-content:center;width:64px;height:80px;border:1px dashed var(--faint);border-radius:6px;font-size:12px;text-align:center;padding:6px;cursor:pointer;color:var(--accent)}
 .cedit{background:var(--surface);border:1px solid var(--ink);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
 .cedit .ttl{font-weight:600}
 .cedit .ttl span{font-family:var(--f-mono);font-weight:500;background:var(--sunk);border-radius:6px;padding:1px 6px;margin-right:6px}
@@ -331,6 +333,8 @@ const OLD_NAMES={rosv:"РОСВ — скица и ситуация (копия, 
    пълномощно ... някви други ей такив работи") - one per project, not per plot */
 const COMMON=["Нотариален акт","Скица-виза","ПУП","Пълномощно"];
 const MOVED_TO_COMMON={"Нотариален акт":"Нотариален акт","Скица (на името на собственика)":"Скица-виза","Виза за проектиране":"Скица-виза","Пълномощно от собственика":"Пълномощно"};
+/* where a paper must be approved: ticks inside the paper, stored in the approval steps themselves (one truth) */
+const COMMON_STEPS={"Скица-виза":["vik_visa","ep_visa"]};
 const DOCS=["ВиК — изходни данни","ВиК — съгласувана виза","Енерго Про — становище","Енерго Про — съгласувана виза","Геоложки доклад","Геодезическо заснемане","Ситуация","Проект (всички части)","Доклад за ЕЕ (оценка на съответствието)","Доклад за съответствие","Разрешение за строеж"];
 const HAVE=[["no","нямаме"],["asked","поискан"],["orig","оригинал"],["copy","копие"]];
 const HAVE_TEXT={no:"нямаме",asked:"поискан",orig:"оригинал",copy:"копие"};
@@ -493,14 +497,17 @@ function engOptions(s){
   return h+`<option value="__new">+ нов инженер…</option>`;
 }
 /* attached scans / photos / PDFs: kept in the artifact's file store, the row keeps only the id */
+/* icons, not words, for adding a paper (his word 2026-11-11) */
+const ICON_UP=`<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>`;
+const ICON_CAM=`<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
 function filesBlock(files,ro,owner){
   let h=`<div class="files">`;
   (files||[]).forEach((f,i)=>{const img=/^image\//.test(f.t||"");const o=`href="#" data-fopen="${esc(f.id)}" data-ft="${esc(f.t||"")}"`;
     h+=`<div class="file">${img?`<a ${o}><img ${blobUrl[f.id]?`src="${blobUrl[f.id]}"`:`data-blob="${esc(f.id)}" data-ft="${esc(f.t||"")}"`} alt="${esc(f.n)}"></a>`:`<a class="fpdf" ${o}>PDF</a>`}
       <a ${o} class="fname">${esc(f.n)}</a><span class="hint">${bgShort(f.d)}${f.s?" · "+Math.max(1,Math.round(f.s/1024))+" KB":""}</span>
-      ${canWrite&&assetsNs?`<button class="ghost x danger" data-fdel="${i}" data-fown="${owner}" aria-label="Махни файла">×</button>`:""}</div>`});
+      ${canWrite&&assetsNs?`<span class="fmv">${i>0?`<button class="ghost" data-fmove="${i}|-1" aria-label="Наляво">‹</button>`:""}${i<files.length-1?`<button class="ghost" data-fmove="${i}|1" aria-label="Надясно">›</button>`:""}</span><button class="ghost x danger" data-fdel="${i}" data-fown="${owner}" aria-label="Махни файла">×</button>`:""}</div>`});
   if(canWrite&&!ro){
-    h+=assetsNs?`<label class="fadd"><input type="file" accept="image/*" capture="environment" data-fup="${owner}" hidden>Снимай</label><label class="fadd"><input type="file" accept="image/*,application/pdf" multiple data-fup="${owner}" hidden>+ Прикачи снимка, скан или PDF</label>`:"";
+    h+=assetsNs?`<label class="fadd" title="Снимай" aria-label="Снимай"><input type="file" accept="image/*" capture="environment" data-fup="${owner}" hidden>${ICON_CAM}</label><label class="fadd" title="Качи файл" aria-label="Качи файл"><input type="file" accept="image/*,application/pdf" multiple data-fup="${owner}" hidden>${ICON_UP}</label>`:"";
   }
   return h+(uploading?`<span class="hint">Качвам…</span>`:"")+`</div>`;
 }
@@ -1114,6 +1121,11 @@ function editor(id,p,today){
   }
   return h+"</div>";
 }
+function commonApprovals(p,c){
+  const steps=(COMMON_STEPS[c.name]||[]).map(k=>stepByKey(p,k)).filter(Boolean),keys=plotKeys(p);if(!steps.length)return"";
+  return`<div class="capp"><span class="hint">Съгласувана с</span>${keys.map(k=>steps.map(s=>{const sk=skipped(p,s,k),dn=isDone(p,s,k),cl=cellOf(s,k);
+    return`<label class="check${sk?" off":""}"><input type="checkbox" data-capp="${s.key}|${esc(k)}"${dn?" checked":""}${sk||!canWrite?" disabled":""}> ${esc(s.name.split(" — ")[0])}${keys.length>1?" ("+esc(plotLabel(k))+")":""}${sk?" — не трябва (фотоволтаици)":dn&&cl.ans?` <span class="hint">${bgShort(cl.ans)}</span>`:""}</label>`}).join("")).join("")}</div>`;
+}
 function commonPanel(id,p,ro){
   if(!Array.isArray(p.common))normalize(p);
   if(!csel||csel.id!==id||!p.common[csel.i])csel=null;
@@ -1125,7 +1137,7 @@ function commonPanel(id,p,ro){
   if(csel){const c=p.common[csel.i],pid=esc(id)+"-c"+csel.i;
     h+=`<div class="cedit" data-common="${csel.i}">
       <div class="row end"><div class="ttl">${esc(c.name)}</div><span>${canWrite?`<button class="ghost danger" data-delcommon="${csel.i}">Махни</button>`:""}<button class="ghost" data-cclose="1">Затвори</button></span></div>
-      ${filesBlock(c.files,ro,"common")}
+      ${filesBlock(c.files,ro,"common")}${commonApprovals(p,c)}
       <div class="cgrid">
         <label class="f">Имаме ли го<select id="ch-${pid}" data-cc="have"${ro}>${opt(HAVE,c.have||"no")}</select></label>
         <label class="f">Къде е сега<input type="text" id="cw-${pid}" data-cc="where" list="wheres" value="${esc(c.where)}" placeholder="при нас"${ro}></label>
@@ -1234,6 +1246,8 @@ document.addEventListener("click",e=>{
   if(t.dataset.dsel){const[i,k]=t.dataset.dsel.split("|");dsel=dsel&&dsel.i===+i&&dsel.k===k?null:{id,i:+i,k};render();return}
   if(t.dataset.dclose){dsel=null;render();return}
   if(!canWrite)return;
+  if(t.dataset.fmove){const[i,d]=t.dataset.fmove.split("|").map(Number);const tg=fileTarget(p,t);if(!tg||!tg.files)return;const j=i+d;if(j<0||j>=tg.files.length)return;
+    [tg.files[i],tg.files[j]]=[tg.files[j],tg.files[i]];saveSoon(id);render();return}
   if(t.dataset.fdel!==undefined){
     if(t.dataset.armed!=="1"){t.dataset.armed="1";t.textContent="махни?";return}
     const tg=fileTarget(p,t);if(!tg||!tg.files)return;const f=tg.files.splice(+t.dataset.fdel,1)[0];saveSoon(id);render();
@@ -1278,6 +1292,9 @@ function onField(e){
   const id=ed.dataset.id,p=projects[id];if(!p)return;
   if(t.dataset.f){p[t.dataset.f]=t.type==="checkbox"?t.checked:t.value;saveSoon(id);if(t.type==="checkbox")render();else renderSummary();return}
   if(t.dataset.fup){const sp=targetSpec(t);if(sp&&t.files&&t.files.length)uploadFiles([...t.files],sp,id);t.value="";return}
+  if(t.dataset.capp){const[key,k]=t.dataset.capp.split("|");const st=stepByKey(p,key);if(!st)return;const c=ensureCell(st,k);
+    if(t.checked){c.state="done";if(!c.ans)c.ans=todayStr()}else{c.state=c.date?"waiting":"not";c.ans=""}
+    logIt(p,k,st.name+": "+(t.checked?"съгласувана":"отворена отново"));saveSoon(id);render();return}
   if(t.dataset.cc){const c=p.common[+t.closest(".cedit").dataset.common];if(!c)return;c[t.dataset.cc]=t.value;
     if(t.dataset.cc==="have")logIt(p,"",c.name+": "+HAVE_TEXT[t.value]);saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
   if(t.dataset.dc){const ce=t.closest(".cedit");const d=p.docs[+ce.dataset.doc],k=ce.dataset.k;if(!d)return;d.by=d.by||{};const c=d.by[k]=d.by[k]||{have:"no",where:"",date:"",note:""};

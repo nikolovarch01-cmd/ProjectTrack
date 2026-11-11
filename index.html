@@ -455,13 +455,25 @@ function filesBlock(files,ro,owner){
       <a ${o} class="fname">${esc(f.n)}</a><span class="hint">${bgShort(f.d)}${f.s?" · "+Math.max(1,Math.round(f.s/1024))+" KB":""}</span>
       ${canWrite&&assetsNs?`<button class="ghost x danger" data-fdel="${i}" data-fown="${owner}" aria-label="Махни файла">×</button>`:""}</div>`});
   if(canWrite&&!ro){
-    h+=assetsNs?`<label class="fadd"><input type="file" accept="image/*,application/pdf" multiple data-fup="${owner}" hidden>+ Прикачи снимка, скан или PDF</label>`:"";
+    h+=assetsNs?`<label class="fadd"><input type="file" accept="image/*" capture="environment" data-fup="${owner}" hidden>Снимай</label><label class="fadd"><input type="file" accept="image/*,application/pdf" multiple data-fup="${owner}" hidden>+ Прикачи снимка, скан или PDF</label>`:"";
   }
   return h+(uploading?`<span class="hint">Качвам…</span>`:"")+`</div>`;
 }
+/* a phone photo of a document (3-8 MB) is cut to 3000 px on the long side (about 250 dpi on A4, a scanner's
+   quality) as JPEG 0.9 - documents must stay readable (his word 2026-11-11) */
+async function shrink(file){
+  if(!/^image\/(jpeg|png|webp)$/.test(file.type)||file.size<2*1024*1024||!window.createImageBitmap)return file;
+  try{const bm=await createImageBitmap(file,{imageOrientation:"from-image"});const sc=Math.min(1,3000/Math.max(bm.width,bm.height));
+    const c=document.createElement("canvas");c.width=Math.round(bm.width*sc);c.height=Math.round(bm.height*sc);
+    const g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,c.width,c.height);g.drawImage(bm,0,0,c.width,c.height);bm.close&&bm.close();
+    const b=await new Promise(r=>c.toBlob(r,"image/jpeg",0.9));if(!b||b.size>=file.size)return file;
+    return new File([b],file.name.replace(/\.[^.]+$/,"")+".jpg",{type:"image/jpeg"});
+  }catch(e){return file}
+}
 async function uploadFiles(list,target,id){
   if(!assetsNs)return;
-  for(const file of list){
+  for(let file of list){
+    file=await shrink(file);
     if(file.size>20*1024*1024){showBanner("„"+esc(file.name)+"“ е над 20 MB. Снимай с по-малък размер или раздели PDF-а.");continue}
     uploading++;renderSoon();
     try{const r=await assetsNs.upload(file,{});const p=projects[id];const tg=p&&resolveTarget(p,target);if(!tg){showBanner("Проектът се смени, докато качвах „"+esc(file.name)+"“. Прикачи го пак.");continue}

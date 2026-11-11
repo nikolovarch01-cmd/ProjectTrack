@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111154418">
+<meta name="pt-build" content="20261111155422">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -170,6 +170,11 @@ table.st td.mono{white-space:nowrap}
 .sc span{display:block}
 /* the project's own papers: one row of tiles on top of the opened project */
 .cpanel{display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.cpanel>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);font-weight:600;font-size:15px;-webkit-user-select:none;user-select:none}
+.cpanel>summary::-webkit-details-marker{display:none}
+.cpanel>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:-4px 4px 0 0;transition:transform .15s}
+.cpanel[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+.cpanel:not([open]){padding-bottom:0;border-bottom:0}
 .cdocs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
 @media (max-width:600px){.cdocs{grid-template-columns:repeat(2,1fr)}}
 .cdoc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid transparent;font-size:12px;line-height:1.3;min-width:0}
@@ -872,7 +877,7 @@ function flush(id){
 }
 
 /* ---------- view state ---------- */
-let filter="all", open=null, sel=null, dsel=null, csel=null, confirmDel=null, confirmPlot=null, query="";
+let filter="all", open=null, sel=null, dsel=null, csel=null, copen=null, confirmDel=null, confirmPlot=null, query="";
 try{const f=localStorage.getItem("pt_filter2");if(f)filter=f}catch(e){}
 
 function newProject(){
@@ -1135,7 +1140,7 @@ function commonApprovals(p,c){
 function commonPanel(id,p,ro){
   if(!Array.isArray(p.common))normalize(p);
   if(!csel||csel.id!==id||!p.common[csel.i])csel=null;
-  let h=`<div class="cpanel"><h2>Документи по проекта</h2><div class="cdocs">`;
+  let h=`<details class="cpanel" data-cfold="${esc(id)}"${copen===id||csel?" open":""}><summary>Документи</summary><div class="cdocs">`;
   p.common.forEach((c,i)=>{const on=csel&&csel.i===i,nf=(c.files||[]).length;
     h+=`<button class="cdoc h-${docPlace(c)?"orig":"no"}${on?" sel":""}" data-csel="${i}" aria-pressed="${on}"><b>${esc(c.name)}</b><span>${esc(docPlace(c)||NOT_HERE)}${nf?` <span class="nf">· ${nf} ${nf===1?"файл":"файла"}</span>`:""}</span></button>`});
   if(canWrite)h+=`<span class="cadd"><input type="text" id="nc-${esc(id)}" placeholder="друг документ"><button data-addcommon="1" aria-label="Добави документ">+</button></span>`;
@@ -1150,7 +1155,7 @@ function commonPanel(id,p,ro){
         <label class="f nt">Бележка<input type="text" id="cn-${pid}" data-cc="note" value="${esc(c.note)}"${ro}></label>
       </div>
     </div>`}
-  return h+`</div>`;
+  return h+`</details>`;
 }
 function docCell(d,k){return(d.by&&d.by[k])||{have:"no",where:"",date:"",note:""}}
 function docsSection(id,p,keys,ro){
@@ -1226,6 +1231,9 @@ function renamePlotKey(p,from,to){
   p.steps.forEach(s=>{if(s.by&&s.by[from]!==undefined){s.by[to]=s.by[from];delete s.by[from]}});
   if(p.pvBy&&p.pvBy[from]!==undefined){p.pvBy[to]=p.pvBy[from];delete p.pvBy[from]}
 }
+/* „Документи" folds open/shut (his word 2026-11-11); remembered while the page is open */
+document.addEventListener("toggle",e=>{const d=e.target;if(!d.dataset||!d.dataset.cfold)return;
+  if(d.open)copen=d.dataset.cfold;else{if(copen===d.dataset.cfold)copen=null;if(csel&&csel.id===d.dataset.cfold){csel=null;render()}}},true);
 document.addEventListener("click",e=>{
   if(e.target.closest("a,input,select,label"))return;
   const t=e.target.closest("button,[data-toggle],tr[data-goto]");if(!t)return;

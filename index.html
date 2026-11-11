@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="2026-11-11b">
+<meta name="pt-build" content="20261111152703">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -1349,6 +1349,19 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch
   navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="pt-updated"&&performance.now()<15000&&!typing()&&!uploading&&!dirty.size)location.reload()});
   /* with addEventListener the browser holds the worker's messages until this is called */
   navigator.serviceWorker.startMessages&&navigator.serviceWorker.startMessages()}
+/* the page itself looks for a newer build right after opening (the build mark in the head changes on
+   every upload); a newer one is put into the app copy and taken at once - nothing unsaved, first 20 s only.
+   SHELL_CACHE must match SHELL in sw.js */
+const SHELL_CACHE="pt-shell-v3";
+async function checkNewer(){
+  try{const r=await fetch("./?fresh="+Date.now(),{cache:"no-store"});if(!r.ok)return;const t=await r.text();
+    const m=t.match(/name="pt-build" content="([^"]+)"/),mine=document.querySelector('meta[name="pt-build"]');
+    if(!m||(mine&&mine.content===m[1]))return;
+    if(window.caches)await (await caches.open(SHELL_CACHE)).put(new URL("./",location.href).href,new Response(t,{headers:{"Content-Type":"text/html; charset=utf-8"}}));
+    if(performance.now()<20000&&!typing()&&!uploading&&!dirty.size)location.reload();
+  }catch(e){}
+}
+setTimeout(checkNewer,1200);
 /* iPhone ignores "no zoom" in the viewport line - stop the pinch and double-tap zoom by hand */
 if(window.matchMedia&&matchMedia("(pointer:coarse)").matches){
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));

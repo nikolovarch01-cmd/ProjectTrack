@@ -1,4 +1,4 @@
-<title>Съгласувания на проекти</title>
+<title>ProjectTrack</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -188,7 +188,7 @@ table.st td.mono{white-space:nowrap}
 </style>
 
 <div class="gate panel" id="gate">
-  <h1>Съгласувания</h1>
+  <h1>ProjectTrack</h1>
   <div id="needLink" hidden>Отвори линка, който ти е изпратен.</div>
   <form id="nameForm" class="gate" style="margin:0" hidden>
     <label class="f">Твоето име<input id="nmName" type="text" autocomplete="name" required></label>
@@ -204,7 +204,7 @@ table.st td.mono{white-space:nowrap}
 </div>
 <div class="wrap" id="app" hidden>
   <div class="top">
-    <div><h1>Съгласувания</h1><div class="today" id="today"></div></div>
+    <div><h1>ProjectTrack</h1><div class="today" id="today"></div></div>
     <div class="right">
       <input id="search" type="search" placeholder="Търси клиент, УПИ, село" aria-label="Търсене">
       <button data-view="people">Инженери</button>
@@ -485,7 +485,7 @@ async function uploadFiles(list,target,id){
    users.json (next to this page, public): vault = K -> {data-repo token}; team = link secret -> {K};
    admins[] = admin link secret -> {K, page-repo token}. The device keeps only the link secret and
    the name (localStorage); tokens are unsealed on every open and kept in memory. */
-const GH_OWNER="nikolovarch01-cmd", PAGE_REPO="saglasuvaniya", DATA_REPO="saglasuvaniya-data", BR="main", API="https://api.github.com";
+const GH_OWNER="nikolovarch01-cmd", PAGE_REPO="ProjectTrack", DATA_REPO="ProjectTrack-data", BR="main", API="https://api.github.com";
 const SESS="pt_device_v1";
 const devGet=()=>{try{return JSON.parse(localStorage.getItem(SESS)||"null")}catch(e){return null}};
 const devSet=s=>{try{localStorage.setItem(SESS,JSON.stringify(s))}catch(e){}};
@@ -704,7 +704,7 @@ $("#setupForm").addEventListener("submit",async e=>{
   if(!name)return;
   gateMsg("Проверявам ключовете…");
   const d=await gh(`/repos/${GH_OWNER}/${DATA_REPO}`,{},data).catch(()=>null);
-  if(!d||!d.ok){gateMsg("Ключът не отваря saglasuvaniya-data. В GitHub избери и двете: saglasuvaniya и saglasuvaniya-data.");return}
+  if(!d||!d.ok){gateMsg("Ключът не отваря ProjectTrack-data. В GitHub избери и двете: ProjectTrack и ProjectTrack-data.");return}
   try{
     const kRaw=crypto.getRandomValues(new Uint8Array(32));
     const me=await makeAdmin(name,kRaw,page);
@@ -714,7 +714,7 @@ $("#setupForm").addEventListener("submit",async e=>{
     const old=devGet();devSet({kind:"admin",id:me.id,s:mySecret,name,dev:old&&old.dev||"d"+rnd(9)});
     session={name,admin:true,data,k:u8b64(kRaw),page,dev:devGet().dev};
     $("#suData").value="";$("#setupForm").hidden=true;gateMsg("");enterApp();
-  }catch(err){gateMsg("Не се записа ("+(err.code||"грешка")+"). В GitHub избери и двете: saglasuvaniya и saglasuvaniya-data, с Contents: Read and write.")}
+  }catch(err){gateMsg("Не се записа ("+(err.code||"грешка")+"). В GitHub избери и двете: ProjectTrack и ProjectTrack-data, с Contents: Read and write.")}
 });
 $("#logout").addEventListener("click",()=>{devDel();location.reload()});
 
@@ -750,7 +750,7 @@ $("#v-users").addEventListener("click",async e=>{
   if(b.id==="nkSave"){
     const data=$("#nkData").value.trim();if(!data)return;uMsg("Проверявам ключа…");
     const d=await gh(`/repos/${GH_OWNER}/${DATA_REPO}`,{},data).catch(()=>null);
-    if(!d||!d.ok){uMsg("Ключът не отваря saglasuvaniya-data.");return}
+    if(!d||!d.ok){uMsg("Ключът не отваря ProjectTrack-data.");return}
     await refreshUsers();const doc=JSON.parse(JSON.stringify(usersDoc));
     try{doc.vault=await seal(await aesKey(b64u8(session.k)),{data});await saveUsers(doc,session.page);
       session.data=data;

@@ -1,0 +1,1143 @@
+<title>Съгласувания на проекти</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working column - summary tiles, "what waits" list, then project cards; a card opens into plots x specialities and plots x steps grids. */
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --sunk:#f6f8fa; --ink:#17212b; --muted:#5a6673; --faint:#8a95a1; --line:#d9dfe5;
+  --accent:#1f4f9a; --accent-bg:#e3ecf8;
+  --late:#b3261e; --late-bg:#fbe7e5; --soon:#8a5a00; --soon-bg:#fdf0d5; --ok:#246b3a; --ok-bg:#e2f2e6;
+  --fix:#6b3fa0; --fix-bg:#efe6fa; --go:#0b6b78; --go-bg:#dcf2f4; --skip:#7d8794; --skip-bg:#eceff2;
+  --f-body:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12171d; --surface:#1b222a; --sunk:#161c23; --ink:#e6ebf0; --muted:#a3adb8; --faint:#77828e; --line:#2c3540;
+  --accent:#8fb4ee; --accent-bg:#1f3150;
+  --late:#ff9b92; --late-bg:#41201e; --soon:#f2c46b; --soon-bg:#3a2e14; --ok:#8fd3a2; --ok-bg:#1b3324;
+  --fix:#cdb0f2; --fix-bg:#33264a; --go:#7fd6e0; --go-bg:#173a3f; --skip:#98a2ad; --skip-bg:#262d35; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171d; --surface:#1b222a; --sunk:#161c23; --ink:#e6ebf0; --muted:#a3adb8; --faint:#77828e; --line:#2c3540;
+  --accent:#8fb4ee; --accent-bg:#1f3150;
+  --late:#ff9b92; --late-bg:#41201e; --soon:#f2c46b; --soon-bg:#3a2e14; --ok:#8fd3a2; --ok-bg:#1b3324;
+  --fix:#cdb0f2; --fix-bg:#33264a; --go:#7fd6e0; --go-bg:#173a3f; --skip:#98a2ad; --skip-bg:#262d35; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 48px}
+.wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font-size:22px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-size:13px;font-weight:600;margin:0;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px}
+button:hover{border-color:var(--faint)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.card-head:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:500}
+button.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+button.danger,.danger{color:var(--late)}
+input,select,textarea{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:6px 9px;min-width:0;width:100%}
+textarea{resize:vertical;min-height:38px}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.top .right{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.today{color:var(--muted);font-size:13px}
+#search{width:240px;max-width:100%}
+.banner{padding:9px 12px;border-radius:8px;background:var(--soon-bg);color:var(--soon);font-size:13px}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{text-align:left;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;border:1px solid transparent}
+.tile .n{font-size:26px;font-weight:600;line-height:1.1}
+.tile .l{font-size:13px}
+.tile[aria-pressed="true"]{border-color:currentColor;box-shadow:inset 0 0 0 1px currentColor}
+.t-late{background:var(--late-bg);color:var(--late)} .t-soon{background:var(--soon-bg);color:var(--soon)}
+.t-fix{background:var(--fix-bg);color:var(--fix)} .t-go{background:var(--go-bg);color:var(--go)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.wait-row{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;border-radius:0;text-align:left;width:100%}
+.wait-row:first-child{border-top:0}
+.wait-row .who{min-width:0}
+.wait-row .who b{font-weight:500}
+.wait-row .who span{color:var(--muted)}
+.pcard{display:grid;grid-template-columns:40px repeat(3,minmax(0,1fr)) auto auto;gap:8px;align-items:end;padding:6px 8px;width:100%}
+.pcard b{align-self:center}
+@media (max-width:760px){.pcard{grid-template-columns:40px minmax(0,1fr) auto}.pcard label.f{grid-column:2/-1}}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:12px;align-items:center}
+@media (max-width:700px){.row2{grid-template-columns:minmax(0,1fr)}}
+.pls{display:flex;flex-direction:column;gap:6px}
+.pl{display:grid;grid-template-columns:44px auto minmax(0,1fr);gap:10px;align-items:center;font-size:14px}
+.pl .last{min-width:0;color:var(--muted)}
+@media (max-width:480px){.pl{grid-template-columns:40px minmax(0,1fr)}.pl .last{grid-column:2}}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;border-radius:8px 8px 0 0;background:transparent;color:var(--muted);padding:8px 14px;font-weight:500}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent)}
+table.st{border-collapse:collapse;width:100%;font-size:14px}
+table.st th{text-align:left;font-size:12px;font-weight:500;color:var(--muted);padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.st td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.st tbody tr{cursor:pointer}
+table.st tbody tr:hover{background:var(--sunk)}
+table.st td.mono{white-space:nowrap}
+.arch{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.archc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.archc .ttl{grid-column:1/-1;font-family:var(--f-mono);font-weight:500}
+.archc .wide{grid-column:1/-1}
+.stage{display:flex;gap:2px;grid-column:1/-1}
+.stage i{flex:1;height:6px;border-radius:3px;background:var(--skip-bg)}
+.stage i.on{background:var(--accent)}
+.cell.c-sent{background:var(--accent-bg);color:var(--accent);border-color:transparent}
+.cell.c-back{background:var(--fix-bg);color:var(--fix);border-color:transparent}
+.tel{color:var(--accent);text-decoration:none;font-family:var(--f-mono);white-space:nowrap}
+.balls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+@media (max-width:820px){.balls{grid-template-columns:minmax(0,1fr)}}
+.bcol{min-width:0;display:flex;flex-direction:column}
+.bhead{padding-bottom:4px;border-bottom:2px solid var(--ink);margin-bottom:2px}
+.pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.p-late{background:var(--late-bg);color:var(--late)} .p-soon{background:var(--soon-bg);color:var(--soon)}
+.p-fix{background:var(--fix-bg);color:var(--fix)} .p-ok{background:var(--ok-bg);color:var(--ok)}
+.p-wait{background:var(--accent-bg);color:var(--accent)} .p-not{background:var(--skip-bg);color:var(--muted)}
+.p-skip{background:var(--skip-bg);color:var(--skip)} .p-go{background:var(--go-bg);color:var(--go)}
+.empty{color:var(--muted);font-size:14px;padding:4px 0}
+.list{display:flex;flex-direction:column;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.card-head{display:flex;flex-direction:column;gap:8px;padding:12px 14px;cursor:pointer}
+.card-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.card-head .name{font-size:17px;font-weight:600}
+.card-head .meta{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.flags{display:flex;gap:4px;flex-wrap:wrap;align-items:flex-start}
+.plotline{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13px}
+.plotline .forecast{color:var(--muted);font-size:12px;text-align:right}
+@media (max-width:560px){.plotline{grid-template-columns:44px minmax(0,1fr)}.plotline .forecast{grid-column:1/-1;text-align:left}}
+.track{display:flex;gap:3px}
+.track i{flex:1;height:8px;border-radius:3px;background:var(--skip-bg)}
+.track i.s-done{background:var(--ok)} .track i.s-late{background:var(--late)} .track i.s-soon{background:var(--soon)}
+.track i.s-wait{background:var(--accent)} .track i.s-fix{background:var(--fix)} .track i.s-go{background:var(--go);opacity:.55}
+.track i.s-skip{background:repeating-linear-gradient(45deg,var(--skip-bg) 0 3px,transparent 3px 6px)}
+.ed{border-top:1px solid var(--line);padding:12px 14px 14px;display:flex;flex-direction:column;gap:16px;background:var(--sunk)}
+.ed input,.ed select,.ed textarea{background:var(--surface)}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.grid4{grid-template-columns:minmax(0,1fr)}}
+.check{display:flex;gap:6px;align-items:center;font-size:13px}
+.check input{width:auto}
+.plots{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.plot{display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px 4px 4px 10px}
+.plot b{font-family:var(--f-mono);font-weight:500}
+.mx-wrap{overflow-x:auto;max-width:100%}
+.mx{border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.mx th,.mx td{border-bottom:1px solid var(--line);padding:4px 6px;text-align:center;white-space:nowrap;vertical-align:middle}
+.mx th{font-weight:500;font-size:14px;border-left:1px solid var(--line)}
+.mx td{border-left:1px solid var(--line)}
+.mx td.sn,.mx th.sn{text-align:left;font-size:14px;border-left:0;padding:4px 6px 4px 10px;white-space:normal;min-width:150px}
+.mx td.sn small{display:block;color:var(--faint);font-size:11px}
+.mx tr:last-child td{border-bottom:0}
+.mx .x{padding:0 6px;font-size:14px}
+.cell{width:46px;height:34px;padding:0;font-size:18px;font-weight:600;border-radius:6px}
+.cell.c-not{background:var(--sunk)} .cell.c-work{background:var(--soon-bg);color:var(--soon);border-color:transparent}
+.cell.c-ready{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.sc{min-width:108px;padding:4px 8px;border-radius:7px;font-size:12px;line-height:1.25;border:1px solid transparent;text-align:left}
+.sc b{display:block;font-weight:600}
+.sc.sel{outline:2px solid var(--ink);outline-offset:1px}
+.sc.k-done{background:var(--ok-bg);color:var(--ok)} .sc.k-late{background:var(--late-bg);color:var(--late)}
+.sc.k-soon{background:var(--soon-bg);color:var(--soon)} .sc.k-wait{background:var(--accent-bg);color:var(--accent)}
+.sc.k-fix{background:var(--fix-bg);color:var(--fix)} .sc.k-go{background:var(--go-bg);color:var(--go)}
+.sc.k-not{background:var(--sunk);color:var(--muted);border-color:var(--line)} .sc.k-skip{background:transparent;color:var(--skip);border:1px dashed var(--line)}
+.sc.h-no{background:var(--late-bg);color:var(--late)} .sc.h-asked{background:var(--soon-bg);color:var(--soon)}
+.sc.h-orig{background:var(--ok-bg);color:var(--ok)} .sc.h-copy{background:var(--accent-bg);color:var(--accent)}
+.sc span{display:block}
+.files{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
+.file{display:flex;flex-direction:column;gap:2px;width:108px;font-size:12px;position:relative}
+.file img,.fpdf{width:108px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--sunk)}
+.fpdf{display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--late);text-decoration:none}
+.fname{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .x{position:absolute;top:2px;right:2px;background:var(--surface);padding:0 6px}
+.fadd{display:flex;align-items:center;justify-content:center;width:108px;height:80px;border:1px dashed var(--faint);border-radius:6px;font-size:12px;text-align:center;padding:6px;cursor:pointer;color:var(--accent)}
+.cedit{background:var(--surface);border:1px solid var(--ink);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.cedit .ttl{font-weight:600}
+.cedit .ttl span{font-family:var(--f-mono);font-weight:500;background:var(--sunk);border-radius:6px;padding:1px 6px;margin-right:6px}
+.cgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+@media (max-width:760px){.cgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.term{display:flex;gap:4px}
+.term input{width:60px}
+.rem{display:flex;flex-direction:column;gap:4px}
+.rem-row{display:flex;gap:8px;align-items:center;font-size:14px}
+.rem-row input[type=checkbox]{width:auto}
+.rem-row.done span{text-decoration:line-through;color:var(--faint)}
+.fc{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.fc div{display:flex;gap:8px;flex-wrap:wrap}
+.fc .mono{font-weight:500}
+.tl{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:4px 0 10px;display:flex;flex-direction:column;gap:3px}
+.tl-scale{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-left:calc(min(38%,230px) + 8px);margin-right:52px}
+.tl-row{display:grid;grid-template-columns:min(38%,230px) minmax(0,1fr) 44px;gap:8px;align-items:center;font-size:12px}
+.tl-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.tl-t{position:relative;height:14px;background:var(--sunk);border-radius:4px}
+.tl-t i{position:absolute;top:2px;bottom:2px;border-radius:3px}
+.tl-t em{position:absolute;left:4px;top:-1px;font-size:11px;color:var(--faint);font-style:normal}
+.tl-today{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);z-index:1}
+.b-done{background:var(--ok)} .b-them{background:var(--accent)} .b-late{background:var(--late)} .b-fix{background:var(--fix)}
+.b-plan{background:repeating-linear-gradient(90deg,var(--faint) 0 4px,transparent 4px 7px);opacity:.7}
+.tl-d{font-size:11px;text-align:right}
+.gate{max-width:380px;margin:12vh auto 0;display:flex;flex-direction:column;gap:12px}
+.gate .err{color:var(--late);font-size:13px;min-height:1em}
+.ulist{display:flex;flex-direction:column;gap:6px}
+.ulist .u{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:4px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:space-between}
+.confirm{background:var(--late-bg);color:var(--late);border-radius:8px;padding:8px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.legend{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--muted)}
+.hint{font-size:12px;color:var(--faint)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div class="gate panel" id="gate">
+  <h1>Съгласувания</h1>
+  <form id="loginForm" class="gate" style="margin:0" hidden>
+    <label class="f">Име<input id="lgName" type="text" autocomplete="username" required></label>
+    <label class="f">Парола<input id="lgPass" type="password" autocomplete="current-password" required></label>
+    <button class="primary" type="submit">Влез</button>
+  </form>
+  <form id="setupForm" class="gate" style="margin:0" hidden>
+    <h2>Първа настройка</h2>
+    <label class="f">Твоето име<input id="suName" type="text" autocomplete="username" required></label>
+    <label class="f">Парола (поне 8 знака)<input id="suPass" type="password" autocomplete="new-password" minlength="8" required></label>
+    <label class="f">Ключ за данните (saglasuvaniya-data)<input id="suData" type="password" autocomplete="off" required></label>
+    <label class="f">Ключ за страницата (saglasuvaniya)<input id="suPage" type="password" autocomplete="off" required></label>
+    <button class="primary" type="submit">Запиши</button>
+  </form>
+  <div class="err" id="gateErr"></div>
+</div>
+<div class="wrap" id="app" hidden>
+  <div class="top">
+    <div><h1>Съгласувания</h1><div class="today" id="today"></div></div>
+    <div class="right">
+      <input id="search" type="search" placeholder="Търси клиент, УПИ, село" aria-label="Търсене">
+      <button data-view="people">Инженери</button>
+      <button id="add" class="primary">+ Нов проект</button>
+      <button id="usersBtn" data-view="users" hidden>Входове</button>
+      <button id="logout" class="ghost" title="Изход"><span id="whoName"></span> · Изход</button>
+    </div>
+  </div>
+  <div id="banner" class="banner" hidden></div>
+  <section id="v-users" class="view panel" hidden><div class="row end"><h2>Входове</h2><button data-view="main">Затвори</button></div>
+    <div class="ulist" id="ulist"></div>
+    <div class="row">
+      <label class="f" style="flex:1 1 160px">Име<input id="nuName" type="text" autocomplete="off"></label>
+      <label class="f" style="flex:1 1 160px">Парола (поне 8 знака)<input id="nuPass" type="text" autocomplete="off"></label>
+      <label class="check"><input type="checkbox" id="nuAdmin"> дава входове</label>
+      <button id="nuAdd" class="primary">Добави</button>
+    </div>
+    <div class="row">
+      <label class="f" style="flex:1 1 260px">Нов ключ за данните<input id="nkData" type="password" autocomplete="off"></label>
+      <button id="nkSave">Смени ключа</button>
+    </div>
+    <div class="hint" id="uMsg"></div>
+  </section>
+  <div hidden><div id="overview"></div><div id="v-main"></div><div id="v-overview"></div></div>
+  <section id="v-people" class="view panel" hidden><div class="row end"><h2>Инженери</h2><button data-view="main">Затвори</button></div><div id="people"></div></section>
+  <div class="row end">
+    <h2 id="listTitle">Проекти</h2>
+    <label class="check" style="color:var(--muted)"><input type="checkbox" id="showClosed"> покажи приключените</label>
+  </div>
+  <div class="list" id="list"><div class="empty">Зареждам проектите…</div></div>
+  <details class="panel" id="more"><summary><b>Срокове и закъснения</b></summary>
+    <div class="tiles" id="tiles" style="margin-top:8px"></div>
+    <div class="panel-head" style="margin-top:8px"><h2 id="waitTitle">Статус</h2><span class="hint" id="waitHint"></span></div>
+    <div id="wait"></div>
+  </details>
+  <div class="legend" id="legend"></div>
+</div>
+<datalist id="specnames"><option value="Конструкции"><option value="Ел"><option value="ВиК"><option value="Геодезия"><option value="ПБЗ"><option value="Геология"><option value="ЕЕ"><option value="ОВК"><option value="Пожарна безопасност"><option value="Надзор"></datalist>
+<datalist id="munis"><option value="Аврен"><option value="Варна"></datalist>
+<datalist id="wheres"><option value="при нас"><option value="при клиента"><option value="в надзора"><option value="в общината"><option value="ВиК"><option value="Енерго Про"><option value="РИОСВ"><option value="Кадастър"><option value="у проектанта"></datalist>
+
+<script>
+"use strict";
+/* ---------- process (his words, docs/process_his_words.md) ---------- */
+const STATES=[["not","Не е почната"],["filed","Пусната"],["waiting","Чака отговор"],["remarks","Забележки за поправка"],["done","Готово"]];
+const UNITS=[["d","дни"],["w","седм."],["m","мес."]];
+/* specialities for Avren (his drawing 71/76, 2026-11-10); Varna may also ask for OVK, fire safety */
+const AVREN_SPECS=["Конструкции","Ел","ВиК","Геодезия","ПБЗ","Геология","ЕЕ"];
+const EXTRA_SPECS=["ОВК","Пожарна безопасност"];
+/* a speciality per plot: not handed over -> handed to the engineer -> back with questions -> ready */
+const SPEC_STATES=[["not","не е подадена"],["sent","при инженера"],["back","върната с въпроси"],["ready","готова"]];
+const SPEC_TEXT={not:"не е подадена",sent:"при инженера",back:"върната с въпроси",ready:"готова"};
+const CELL_NEXT={not:"sent",sent:"back",back:"ready",ready:"not"};
+const CELL_MARK={not:"",sent:"→",back:"?",ready:"✓"};
+/* architecture (our own part) per plot: how far we are, and whom we wait for (his ask, 2026-11-10) */
+const ARCH_STAGES=[["not","Не е почната"],["data","Събираме данни"],["idea","Идеен проект — работим"],["idea_done","Идеен проект — готов"],["tech","Технически проект — работим"],["ready","Готова за съгласуване"],["work","Работен проект"]];
+const ARCH_TEXT=Object.fromEntries(ARCH_STAGES);
+const ARCH_ORDER=ARCH_STAGES.map(x=>x[0]);
+const ARCH_WAIT=[["","никого — работим"],["client","клиента"],["spec","специалност"],["other","друго"]];
+/* order: the visa goes to VIK and Energo Pro; everything must be done before the supervisor; the permit follows the report */
+const TEMPLATE=[
+  {key:"visa",name:"Виза за проектиране",from:"Вписана покупка",term:{n:1,u:"w"},after:[]},
+  {key:"vik_data",name:"ВиК — изходни данни",term:{n:2,u:"w"},after:["visa"]},
+  {key:"vik_visa",name:"ВиК — съгласуване на визата",term:null,after:["vik_data"]},
+  {key:"ep_opinion",name:"Енерго Про — становище за присъединяване",term:{n:1,u:"m"},pv:true,after:["visa"]},
+  {key:"ep_visa",name:"Енерго Про — съгласуване на визата",term:{n:2,u:"w"},pv:true,after:["ep_opinion"]},
+  /* research 2026-11-10: most likely RIOSV Varna (Natura 2000 check), legal answer 14 days - docs/research_permit_process.md */
+  {key:"rosv",name:"РИОСВ — скица и ситуация (копия, през надзора)",term:{n:14,u:"d"},after:["visa"]},
+  {key:"supervisor",name:"Надзор — доклад за съответствие",term:{n:2,u:"w"},after:["vik_visa","ep_visa","rosv"],specs:true},
+  /* ZUT art.144(3): approval 14 days with a consultant's report; permit with it or within 7 days (art.148(4)) */
+  {key:"permit",name:"Одобряване и разрешение за строеж",from:"Внесено на",term:{n:14,u:"d"},after:["supervisor"]},
+  /* ZUT art.215: 14 days for appeal, then the permit is in force */
+  {key:"permit_force",name:"Влизане в сила на разрешението",from:"Издадено на",term:{n:14,u:"d"},after:["permit"]}
+];
+const EXTRA_STEPS=[{key:"tech_control",name:"Технически контрол — конструкции",term:null,after:[]},{key:"geo",name:"Геозащита — становище (свлачищна зона)",term:null,after:["visa"]}];
+const MODEL=3;
+const OLD_NAMES={rosv:"РОСВ — скица и ситуация (копия, през надзора)",permit:"Разрешение за строеж"};
+/* documents per plot: do we have it, and where is it now (his ask, 2026-11-10) */
+const DOCS=["Нотариален акт","Скица (на името на собственика)","Виза за проектиране","ВиК — изходни данни","ВиК — съгласувана виза","Енерго Про — становище","Енерго Про — съгласувана виза","Геоложки доклад","Геодезическо заснемане","Ситуация","Пълномощно от собственика","Проект (всички части)","Доклад за ЕЕ (оценка на съответствието)","Доклад за съответствие","Разрешение за строеж"];
+const HAVE=[["no","нямаме"],["asked","поискан"],["orig","оригинал"],["copy","копие"]];
+const HAVE_TEXT={no:"нямаме",asked:"поискан",orig:"оригинал",copy:"копие"};
+const WHERE=["при нас","при клиента","в надзора","в общината","ВиК","Енерго Про","РИОСВ","Кадастър","у проектанта"];
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function todayStr(){return ymd(new Date())}
+function parse(s){if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(s))return null;const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)}
+function addTerm(s,t){const d=parse(s);if(!d||!t||!(t.n>0))return null;
+  if(t.u==="d")d.setDate(d.getDate()+t.n);else if(t.u==="w")d.setDate(d.getDate()+7*t.n);
+  else{const day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+t.n);const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,last))}
+  return ymd(d)}
+function maxDate(a){return a.reduce((m,x)=>x>m?x:m,"")}
+function bg(s){if(!s)return"—";const[y,m,d]=s.split("-");return d+"."+m+"."+y}
+function bgShort(s){if(!s)return"—";const[,m,d]=s.split("-");return d+"."+m}
+function daysBetween(a,b){return Math.round((parse(b)-parse(a))/86400000)}
+function termText(t){if(!t||!(t.n>0))return"срок?";const n=t.n;
+  if(t.u==="d")return n+(n===1?" ден":" дни");if(t.u==="w")return n+(n===1?" седмица":" седмици");return n+(n===1?" месец":" месеца")}
+
+/* ---------- data shape ----------
+ project: {client, ident, address, municipality, plots:[...], pvBy:{plot:bool}, note, closed, created, v,
+   specs:[{name, by:{plot:"work"|"ready"}}],
+   steps:[{key,name,from,term,pv,after:[keys],specs, by:{plot:{state,date,reg,ans,note,remarks:[{t,d}]}}}]} */
+function normalize(p){
+  if(!p||typeof p!=="object")return p;
+  if(!Array.isArray(p.plots))p.plots=[];
+  if(p.municipality==null)p.municipality="";
+  const keys=plotKeys(p);
+  if(typeof p.pvBy!=="object"||!p.pvBy){const was=!!p.pv;p.pvBy={};if(was)keys.forEach(k=>p.pvBy[k]=true)}
+  p.specs=(p.specs||[]).map(s=>s.by?s:{name:s.name,by:s.state&&s.state!=="not"?{[keys[0]]:s.state}:{}});
+  p.specs.forEach(s=>Object.keys(s.by||{}).forEach(k=>{if(s.by[k]==="work")s.by[k]="sent"}));
+  if(typeof p.arch!=="object"||!p.arch){p.arch={};
+    const a=p.specs.find(s=>s.name==="Архитектура");
+    if(a)Object.keys(a.by||{}).forEach(k=>{p.arch[k]={stage:a.by[k]==="ready"?"ready":"idea",wait:"",what:"",since:"",note:""}});
+  }
+  p.specs=p.specs.filter(s=>s.name!=="Архитектура");
+  p.steps=(p.steps||[]).map(s=>{
+    const t=TEMPLATE.find(x=>x.key===s.key);
+    if(!s.by){const c={state:s.state||"not",date:s.date||"",reg:"",ans:"",note:s.note||"",remarks:[]};s={key:s.key,name:s.name,from:s.from||"",term:s.term||null,pv:!!s.pv,by:{}};
+      if(c.state!=="not"||c.date||c.note)keys.forEach(k=>s.by[k]=JSON.parse(JSON.stringify(c)))}
+    if(!Array.isArray(s.after))s.after=t?t.after.slice():[];
+    if(t&&t.specs)s.specs=true;
+    return s});
+  if(!Array.isArray(p.docs))p.docs=DOCS.map(n=>({name:n,by:{}}));
+  if((p.v||1)<MODEL){
+    p.steps.forEach(s=>{const t=TEMPLATE.find(x=>x.key===s.key);if(!t)return;
+      if(OLD_NAMES[s.key]&&s.name===OLD_NAMES[s.key]){s.name=t.name;if(!s.term&&t.term)s.term={...t.term};if(t.from)s.from=t.from}});
+    TEMPLATE.forEach((t,i)=>{if(!p.steps.some(s=>s.key===t.key))p.steps.splice(Math.min(i,p.steps.length),0,stepFromTemplate(t))});
+    p.v=MODEL;
+  }
+  return p;
+}
+function stepFromTemplate(t){return{key:t.key,name:t.name,from:t.from||"",term:t.term?{...t.term}:null,pv:!!t.pv,after:t.after.slice(),specs:!!t.specs,by:{}}}
+function plotKeys(p){return p.plots&&p.plots.length?p.plots:[""]}
+function plotLabel(k){return k||"имот"}
+const EMPTY_CELL={state:"not",date:"",reg:"",ans:"",note:"",remarks:[]};
+function cellOf(s,k){return(s.by&&s.by[k])||EMPTY_CELL}
+function ensureCell(s,k){s.by=s.by||{};if(!s.by[k])s.by[k]=JSON.parse(JSON.stringify(EMPTY_CELL));return s.by[k]}
+function stepByKey(p,key){return p.steps.find(s=>s.key===key)}
+function skipped(p,s,k){return!!(s.pv&&p.pvBy&&p.pvBy[k])}
+function isDone(p,s,k){return skipped(p,s,k)||cellOf(s,k).state==="done"}
+function archOf(p,k){return(p.arch&&p.arch[k])||{stage:"not",wait:"",what:"",since:"",note:""}}
+function archReady(p,k){const st=archOf(p,k).stage;return st==="ready"||st==="work"}
+function specsReady(p,k){return archReady(p,k)&&(p.specs||[]).every(s=>(s.by||{})[k]==="ready")}
+function specsLeftCount(p,k){return(archReady(p,k)?0:1)+(p.specs||[]).filter(x=>(x.by||{})[k]!=="ready").length}
+function blockers(p,s,k){
+  const b=(s.after||[]).map(a=>stepByKey(p,a)).filter(t=>t&&!isDone(p,t,k)).map(t=>t.name);
+  if(s.specs&&!specsReady(p,k)){const n=(p.specs||[]).filter(x=>(x.by||{})[k]!=="ready").length;b.push(n+(n===1?" специалност не е готова":" специалности не са готови"))}
+  return b;
+}
+/* status of one step for one plot: done | fix | late | soon | wait | go | not | skip */
+function status(p,s,k,today){
+  if(skipped(p,s,k))return"skip";
+  const c=cellOf(s,k);
+  if(c.state==="done")return"done";
+  if(c.state==="remarks")return"fix";
+  if(c.state==="not")return blockers(p,s,k).length?"not":"go";
+  const due=addTerm(c.date,s.term);
+  if(due&&due<today)return"late";
+  if(due&&daysBetween(today,due)<=7)return"soon";
+  return"wait";
+}
+/* remark: open (we must fix) -> fixed (by us) -> closed (accepted by them) */
+function rs(r){return r.s||(r.d?"fixed":"open")}
+const REM_NEXT={open:"fixed",fixed:"closed",closed:"open"};
+const REM_TEXT={open:"за оправяне",fixed:"оправена",closed:"приета"};
+const REM_PILL={open:"p-fix",fixed:"p-wait",closed:"p-ok"};
+const STATUS_TEXT={done:"готово",fix:"забележки",late:"закъснява",soon:"до 7 дни",wait:"чака отговор",go:"да се пусне",not:"чака друго",skip:"прескача се (ФВ)",arch:"работим"};
+const STATUS_PILL={done:"p-ok",fix:"p-fix",late:"p-late",soon:"p-soon",wait:"p-wait",go:"p-go",not:"p-not",skip:"p-skip",arch:"p-go"};
+const TRACK={done:"done",fix:"fix",late:"late",soon:"soon",wait:"wait",go:"go",not:"not",skip:"skip"};
+
+/* forecast: when a step should end for a plot; null = cannot tell (a term is missing) */
+function endDate(p,s,k,today,depth){
+  if((depth||0)>20)return null;
+  const pre=(s.after||[]).map(a=>stepByKey(p,a)).filter(Boolean).map(t=>endDate(p,t,k,today,(depth||0)+1));
+  const c=cellOf(s,k);
+  if(skipped(p,s,k))return pre.some(x=>x===null)?null:maxDate([today,...pre]);
+  if(c.state==="done")return c.ans||addTerm(c.date,s.term)||c.date||today;
+  if(c.state==="filed"||c.state==="waiting"){const d=addTerm(c.date,s.term);return d?maxDate([d,today]):null}
+  if(c.state==="remarks"){const d=addTerm(c.date,s.term);return maxDate([d||today,today])}
+  if(pre.some(x=>x===null))return null;
+  const start=c.date||maxDate([today,...pre]);
+  return addTerm(start,s.term);
+}
+function missingTerms(p,s,k,acc,depth){
+  acc=acc||new Set();if((depth||0)>20)return acc;
+  if(isDone(p,s,k))return acc;
+  if(!(s.term&&s.term.n>0))acc.add(s.name);
+  (s.after||[]).map(a=>stepByKey(p,a)).filter(Boolean).forEach(t=>missingTerms(p,t,k,acc,(depth||0)+1));
+  return acc;
+}
+function startOf(p,s,k,today){
+  const c=cellOf(s,k);if(c.date)return c.date;
+  const pre=(s.after||[]).map(a=>stepByKey(p,a)).filter(Boolean).map(t=>endDate(p,t,k,today));
+  if(pre.some(x=>x===null))return null;
+  return maxDate([today,...pre]);
+}
+/* one bar per step for one plot: real time while filed (filed -> answer), forecast for what is not filed yet */
+function timeline(p,k,today){
+  const rows=p.steps.filter(s=>!skipped(p,s,k)).map(s=>{const st=status(p,s,k,today);const a=startOf(p,s,k,today),b=endDate(p,s,k,today);return{s,st,a,b}});
+  const known=rows.filter(r=>r.a&&r.b);
+  if(!known.length)return`<div class="hint">Няма достатъчно дати за график.</div>`;
+  const lo=[...known.map(r=>r.a),today].reduce((m,x)=>x<m?x:m), hi=maxDate([...known.map(r=>r.b),today]);
+  const span=Math.max(1,daysBetween(lo,hi)), x=d=>(daysBetween(lo,d)/span*100).toFixed(2);
+  let h=`<div class="tl"><div class="tl-scale"><span>${bg(lo)}</span><span>${bg(hi)}</span></div>`;
+  rows.forEach(r=>{
+    const cls=r.st==="done"?"b-done":r.st==="late"?"b-late":(r.st==="wait"||r.st==="soon")?"b-them":r.st==="fix"?"b-fix":"b-plan";
+    const bar=r.a&&r.b?`<i class="${cls}" style="left:${x(r.a)}%;width:${Math.max(1.5,x(r.b)-x(r.a))}%" title="${bg(r.a)} – ${bg(r.b)}"></i>`:`<em>няма срок</em>`;
+    h+=`<div class="tl-row"><span class="tl-n">${esc(r.s.name.replace(" (копия, през надзора)",""))}</span><div class="tl-t"><b class="tl-today" style="left:${x(today)}%"></b>${bar}</div><span class="tl-d mono">${r.b?bgShort(r.b):"?"}</span></div>`});
+  return h+`<div class="legend" style="margin-top:4px"><span class="pill p-ok">готово</span><span class="pill p-wait">подадено, чакаме</span><span class="pill p-late">закъснява</span><span class="pill p-fix">поправяме забележки</span><span class="pill p-not">план</span><span class="hint">черната черта е днес</span></div></div>`;
+}
+function forecast(p,k,today){
+  const sup=stepByKey(p,"permit")||stepByKey(p,"supervisor");
+  if(!sup)return null;
+  if(isDone(p,sup,k))return{done:true,date:cellOf(sup,k).ans,what:sup.key};
+  const d=endDate(p,sup,k,today);
+  const miss=d?[]:[...missingTerms(p,sup,k)];
+  const specsLeft=specsLeftCount(p,k);
+  return{date:d,miss,specsLeft};
+}
+
+/* ---------- store: Claude db, or this browser only ---------- */
+let store=null, canWrite=true, projects={}, ready=false, assetsNs=null, uploading=0;
+/* engineers: one shared list (collection "people"), each speciality row points to one by id */
+let people={}, peopleStore=null;
+function personName(pid){return pid&&people[pid]?people[pid].name:""}
+function engOptions(s){
+  const list=Object.entries(people).sort((a,b)=>{const am=a[1].spec===s.name?0:1,bm=b[1].spec===s.name?0:1;return am-bm||a[1].name.localeCompare(b[1].name)});
+  let h=`<option value="">— избери —</option>`;
+  list.forEach(([pid,x])=>{h+=`<option value="${esc(pid)}"${s.eng===pid?" selected":""}>${esc(x.name)}${x.spec?" · "+esc(x.spec):""}</option>`});
+  if(s.who&&!s.eng)h+=`<option value="" selected>${esc(s.who)}</option>`;
+  return h+`<option value="__new">+ нов инженер…</option>`;
+}
+/* attached scans / photos / PDFs: kept in the artifact's file store, the row keeps only the id */
+function filesBlock(files,ro,owner){
+  let h=`<div class="files">`;
+  (files||[]).forEach((f,i)=>{const img=/^image\//.test(f.t||"");const o=`href="#" data-fopen="${esc(f.id)}" data-ft="${esc(f.t||"")}"`;
+    h+=`<div class="file">${img?`<a ${o}><img ${blobUrl[f.id]?`src="${blobUrl[f.id]}"`:`data-blob="${esc(f.id)}" data-ft="${esc(f.t||"")}"`} alt="${esc(f.n)}"></a>`:`<a class="fpdf" ${o}>PDF</a>`}
+      <a ${o} class="fname">${esc(f.n)}</a><span class="hint">${bgShort(f.d)}${f.s?" · "+Math.max(1,Math.round(f.s/1024))+" KB":""}</span>
+      ${canWrite&&assetsNs?`<button class="ghost x danger" data-fdel="${i}" data-fown="${owner}" aria-label="Махни файла">×</button>`:""}</div>`});
+  if(canWrite&&!ro){
+    h+=assetsNs?`<label class="fadd"><input type="file" accept="image/*,application/pdf" multiple data-fup="${owner}" hidden>+ Прикачи снимка, скан или PDF</label>`:"";
+  }
+  return h+(uploading?`<span class="hint">Качвам…</span>`:"")+`</div>`;
+}
+async function uploadFiles(list,target,id){
+  if(!assetsNs)return;
+  for(const file of list){
+    if(file.size>20*1024*1024){showBanner("„"+esc(file.name)+"“ е над 20 MB. Снимай с по-малък размер или раздели PDF-а.");continue}
+    uploading++;renderSoon();
+    try{const r=await assetsNs.upload(file,{});const p=projects[id];const tg=p&&resolveTarget(p,target);if(!tg){showBanner("Проектът се смени, докато качвах „"+esc(file.name)+"“. Прикачи го пак.");continue}
+      tg.files=tg.files||[];tg.files.push({id:r.id,n:file.name,t:r.contentType||file.type,s:r.sizeBytes||file.size,d:todayStr()});saveSoon(id)}
+    catch(e){const c=e&&e.code;showBanner(c==="unsupported_type"?"„"+esc(file.name)+"“ е във формат, който не се приема. Снимай като JPG или запиши като PDF.":c==="quota_exceeded"?"Мястото за файлове е пълно.":"Файлът не се качи ("+esc(c||"грешка")+"). Опитай пак.")}
+    finally{uploading--;renderSoon()}
+  }
+}
+/* ---------- GitHub: the page lives on GitHub Pages, the data in a PRIVATE repo ----------
+   users.json (next to this page, public) holds per-login sealed keys: each login's password
+   unwraps a random vault key K; K opens the vault with the data-repo token. Logins that may
+   hand out logins also carry the page-repo token (to rewrite users.json). Tokens live only
+   in sessionStorage. */
+const GH_OWNER="nikolovarch01-cmd", PAGE_REPO="saglasuvaniya", DATA_REPO="saglasuvaniya-data", BR="main", API="https://api.github.com";
+const SESS="pt_session_v1", PBKDF2_IT=600000;
+let session=null, usersDoc=null, usersSha=null;
+const shas={}, wroteAt={}, blobUrl={}, blobBusy={};
+const te=new TextEncoder(), td=new TextDecoder();
+function u8b64(u){let x="";for(let i=0;i<u.length;i+=0x8000)x+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(x)}
+function b64u8(s){return Uint8Array.from(atob(s),c=>c.charCodeAt(0))}
+async function pwKey(pw,salt,it){const base=await crypto.subtle.importKey("raw",te.encode(pw),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:it,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])}
+async function aesKey(raw){return crypto.subtle.importKey("raw",raw,{name:"AES-GCM"},false,["encrypt","decrypt"])}
+async function seal(key,obj){const iv=crypto.getRandomValues(new Uint8Array(12));
+  return{iv:u8b64(iv),ct:u8b64(new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},key,te.encode(JSON.stringify(obj)))))}}
+async function unseal(key,e){return JSON.parse(td.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b64u8(e.iv)},key,b64u8(e.ct))))}
+async function makeLogin(name,pw,admin,kRaw,pageTok){const salt=crypto.getRandomValues(new Uint8Array(16));
+  const s=await seal(await pwKey(pw,salt,PBKDF2_IT),admin?{k:u8b64(kRaw),page:pageTok}:{k:u8b64(kRaw)});
+  return{name,admin:!!admin,salt:u8b64(salt),it:PBKDF2_IT,...s}}
+const sameName=(a,b)=>String(a).trim().toLocaleLowerCase("bg")===String(b).trim().toLocaleLowerCase("bg");
+
+function gh(path,opt={},tok){
+  const h={"Accept":"application/vnd.github+json",...(opt.headers||{})};if(tok)h.Authorization="Bearer "+tok;
+  return fetch(path.startsWith("http")?path:API+path,{cache:"no-cache",...opt,headers:h});
+}
+function ghErr(r,what){const e=new Error(what+" "+r.status);e.code="GitHub "+r.status;e.status=r.status;return e}
+
+async function loadUsers(){
+  usersDoc=null;usersSha=null;
+  const r=await gh(`/repos/${GH_OWNER}/${PAGE_REPO}/contents/users.json?ref=${BR}`);
+  if(r.ok){const j=await r.json();usersSha=j.sha;usersDoc=JSON.parse(td.decode(b64u8(j.content.replace(/\s/g,""))));return}
+  if(r.status===404){return}
+  /* rate limit or network: the copy served next to the page (may be a few minutes old) */
+  const c=await fetch("users.json?t="+Date.now(),{cache:"no-store"}).catch(()=>null);
+  if(c&&c.ok){usersDoc=await c.json();return}
+  if(c&&c.status===404)return;
+  throw ghErr(r,"users");
+}
+async function saveUsers(doc,pageTok){
+  const body={message:"logins: "+(session?session.name:doc.users[0].name),branch:BR,content:u8b64(te.encode(JSON.stringify(doc,null,1)))};
+  if(usersSha)body.sha=usersSha;
+  let r=await gh(`/repos/${GH_OWNER}/${PAGE_REPO}/contents/users.json`,{method:"PUT",body:JSON.stringify(body)},pageTok);
+  if(r.status===409||r.status===422){const g=await gh(`/repos/${GH_OWNER}/${PAGE_REPO}/contents/users.json?ref=${BR}`,{cache:"no-store"},pageTok);
+    if(g.ok){body.sha=(await g.json()).sha;r=await gh(`/repos/${GH_OWNER}/${PAGE_REPO}/contents/users.json`,{method:"PUT",body:JSON.stringify(body)},pageTok)}}
+  if(!r.ok)throw ghErr(r,"save users");
+  usersSha=(await r.json()).content.sha;usersDoc=doc;
+}
+
+/* all writes to the data repo go one after another: each one is a commit on the same branch */
+let wq=Promise.resolve();
+function queue(fn){const p=wq.catch(()=>{}).then(fn);wq=p;return p}
+const dpath=p=>`/repos/${GH_OWNER}/${DATA_REPO}/contents/${p.split("/").map(encodeURIComponent).join("/")}`;
+async function putFile(path,b64,msg){
+  for(let tries=0;;tries++){
+    const body={message:msg,branch:BR,content:b64};if(shas[path])body.sha=shas[path];
+    const r=await gh(dpath(path),{method:"PUT",body:JSON.stringify(body)},session.data);
+    if(r.ok){shas[path]=(await r.json()).content.sha;wroteAt[path]=Date.now();return}
+    if((r.status===409||r.status===422)&&tries<3){const g=await gh(dpath(path)+"?ref="+BR,{cache:"no-store"},session.data);
+      if(g.ok)shas[path]=(await g.json()).sha;else if(g.status===404)delete shas[path];continue}
+    throw ghErr(r,"put");
+  }
+}
+async function delFile(path,msg){
+  for(let tries=0;;tries++){
+    if(!shas[path]){const g=await gh(dpath(path)+"?ref="+BR,{cache:"no-store"},session.data);if(g.status===404)return;if(!g.ok)throw ghErr(g,"get");shas[path]=(await g.json()).sha}
+    const r=await gh(dpath(path),{method:"DELETE",body:JSON.stringify({message:msg,branch:BR,sha:shas[path]})},session.data);
+    if(r.ok||r.status===404){delete shas[path];wroteAt[path]=Date.now();return}
+    if((r.status===409||r.status===422)&&tries<3){delete shas[path];continue}
+    throw ghErr(r,"delete");
+  }
+}
+const jsonB64=o=>u8b64(te.encode(JSON.stringify(o,null,1)));
+const who=()=>session?session.name:"";
+const newId=pre=>pre+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+/* read: one tree request, then only the files whose content changed */
+let pulling=false, pullTimer=null, firstPull=true;
+async function pull(){
+  if(pulling||!session)return;pulling=true;
+  try{
+    const r=await gh(`/repos/${GH_OWNER}/${DATA_REPO}/git/trees/${BR}?recursive=1`,{},session.data);
+    if(r.status===401||r.status===403&&r.headers.get("x-ratelimit-remaining")!=="0"){showBanner("Ключът за данните не важи. Влез пак или поискай нов вход.");return}
+    let tree=[];
+    if(r.ok)tree=(await r.json()).tree||[];
+    else if(r.status!==404&&r.status!==409)throw ghErr(r,"tree");
+    const seen=new Set(), nextP={...projects}, nextE={...people};let changed=false;
+    for(const t of tree){
+      if(t.type!=="blob")continue;seen.add(t.path);
+      const m=t.path.match(/^(projects|people)\/([^/]+)\.json$/);
+      if(!m){shas[t.path]=shas[t.path]||t.sha;continue}
+      if(shas[t.path]===t.sha&&(m[1]==="projects"?nextP[m[2]]:nextE[m[2]]))continue;
+      if(wroteAt[t.path]&&Date.now()-wroteAt[t.path]<90000)continue; /* our own write may not show in the tree yet */
+      const b=await gh(`/repos/${GH_OWNER}/${DATA_REPO}/git/blobs/${t.sha}`,{cache:"default",headers:{"Accept":"application/vnd.github.raw+json"}},session.data);
+      if(!b.ok)continue;
+      const data=JSON.parse(td.decode(new Uint8Array(await b.arrayBuffer())));
+      shas[t.path]=t.sha;changed=true;
+      if(m[1]==="projects"){if(!dirty.has(m[2]))nextP[m[2]]=normalize(data)}else nextE[m[2]]=data;
+    }
+    for(const id of Object.keys(nextP)){const p="projects/"+id+".json";if(!seen.has(p)&&!dirty.has(id)&&shas[p]&&!(wroteAt[p]&&Date.now()-wroteAt[p]<90000)){delete nextP[id];delete shas[p];changed=true}}
+    for(const id of Object.keys(nextE)){const p="people/"+id+".json";if(!seen.has(p)&&shas[p]&&!(wroteAt[p]&&Date.now()-wroteAt[p]<90000)){delete nextE[id];delete shas[p];changed=true}}
+    if(changed||firstPull){projects=nextP;people=nextE;ready=true;firstPull=false;renderSoon()}
+    hideBanner();
+  }catch(e){ready=true;showBanner("Няма връзка с данните ("+esc(e.code||"мрежа")+"). Страницата ще опитва сама.");renderSoon()}
+  finally{pulling=false}
+}
+function startPolling(){clearInterval(pullTimer);pullTimer=setInterval(()=>{if(!document.hidden)pull()},20000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)pull()})}
+
+/* attached files: in the data repo under files/, shown through blob URLs (the repo is private) */
+async function fetchBlob(path,type){
+  if(blobUrl[path])return blobUrl[path];
+  if(!blobBusy[path])blobBusy[path]=(async()=>{
+    const r=await gh(dpath(path)+"?ref="+BR,{cache:"default",headers:{"Accept":"application/vnd.github.raw+json"}},session.data);
+    if(!r.ok)throw ghErr(r,"file");
+    const u=URL.createObjectURL(new Blob([await r.arrayBuffer()],{type:type||"application/octet-stream"}));blobUrl[path]=u;return u;
+  })().finally(()=>{delete blobBusy[path]});
+  return blobBusy[path];
+}
+function hydrateBlobs(){document.querySelectorAll("img[data-blob]").forEach(img=>{const p=img.dataset.blob;img.removeAttribute("data-blob");
+  fetchBlob(p,img.dataset.ft).then(u=>{img.src=u}).catch(()=>{})})}
+new MutationObserver(()=>{if(document.querySelector("img[data-blob]"))hydrateBlobs()}).observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest("a[data-fopen]");if(!a)return;e.preventDefault();e.stopPropagation();
+  const p=a.dataset.fopen,t=a.dataset.ft;if(blobUrl[p]){window.open(blobUrl[p],"_blank");return}
+  const w=window.open("","_blank");fetchBlob(p,t).then(u=>{if(w)w.location.href=u;else window.open(u,"_blank")}).catch(()=>{if(w)w.close();showBanner("Файлът не се отвори. Опитай пак.")})},true);
+const EXT={"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/heic":"heic","image/gif":"gif","application/pdf":"pdf"};
+
+function initStore(){
+  canWrite=true;
+  store={newId:()=>newId("p"),
+    set:(id,data)=>queue(()=>putFile("projects/"+id+".json",jsonB64(data),who()+": "+pname(data))),
+    del:id=>queue(()=>delFile("projects/"+id+".json",who()+": delete "+id))};
+  peopleStore={newId:()=>newId("e"),
+    set:(pid,data)=>queue(()=>putFile("people/"+pid+".json",jsonB64(data),who()+": "+(data.name||pid))),
+    del:pid=>queue(()=>delFile("people/"+pid+".json",who()+": delete "+pid))};
+  assetsNs={
+    upload:async file=>{const ext=EXT[file.type]||(file.name.split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,5)||"bin";
+      const path="files/"+newId("f")+"."+ext;const b64=u8b64(new Uint8Array(await file.arrayBuffer()));
+      await queue(()=>putFile(path,b64,who()+": file "+file.name));
+      blobUrl[path]=URL.createObjectURL(file);return{id:path,contentType:file.type,sizeBytes:file.size}},
+    delete:path=>queue(()=>delFile(path,who()+": delete file"))};
+  pull();startPolling();
+}
+
+/* ---------- login ---------- */
+function gateMsg(t){$("#gateErr").textContent=t||""}
+function enterApp(){
+  $("#gate").hidden=true;$("#app").hidden=false;
+  $("#whoName").textContent=session.name;$("#usersBtn").hidden=!session.admin;
+  initStore();render();
+}
+async function boot(){
+  try{session=JSON.parse(sessionStorage.getItem(SESS)||"null")}catch(e){session=null}
+  if(session&&session.data){enterApp();return}
+  gateMsg("");
+  try{await loadUsers()}catch(e){gateMsg("Няма връзка с GitHub. Опитай пак след малко.");return}
+  if(usersDoc&&usersDoc.users&&usersDoc.users.length){$("#loginForm").hidden=false;$("#lgName").focus()}
+  else $("#setupForm").hidden=false;
+}
+$("#loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();gateMsg("Проверявам…");
+  const name=$("#lgName").value,pw=$("#lgPass").value;
+  try{await loadUsers()}catch(_){}
+  const u=usersDoc&&(usersDoc.users||[]).find(x=>sameName(x.name,name));
+  if(!u){gateMsg("Грешно име или парола.");return}
+  let inner;
+  try{inner=await unseal(await pwKey(pw,b64u8(u.salt),u.it),u)}catch(_){gateMsg("Грешно име или парола.");return}
+  try{const vault=await unseal(await aesKey(b64u8(inner.k)),usersDoc.vault);
+    session={name:u.name,admin:!!u.admin,data:vault.data,k:inner.k,page:inner.page||""};}
+  catch(_){gateMsg("Входът е повреден. Поискай нов.");return}
+  try{sessionStorage.setItem(SESS,JSON.stringify(session))}catch(_){}
+  $("#lgPass").value="";gateMsg("");enterApp();
+});
+$("#setupForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const name=$("#suName").value.trim(),pw=$("#suPass").value,data=$("#suData").value.trim(),page=$("#suPage").value.trim();
+  if(!name||pw.length<8){gateMsg("Паролата трябва да е поне 8 знака.");return}
+  gateMsg("Проверявам ключовете…");
+  const d=await gh(`/repos/${GH_OWNER}/${DATA_REPO}`,{},data).catch(()=>null);
+  if(!d||!d.ok){gateMsg("Ключът за данните не отваря saglasuvaniya-data.");return}
+  const pg=await gh(`/repos/${GH_OWNER}/${PAGE_REPO}`,{},page).catch(()=>null);
+  if(!pg||!pg.ok){gateMsg("Ключът за страницата не отваря saglasuvaniya.");return}
+  try{
+    const kRaw=crypto.getRandomValues(new Uint8Array(32));
+    const doc={v:1,vault:await seal(await aesKey(kRaw),{data}),users:[await makeLogin(name,pw,true,kRaw,page)]};
+    await saveUsers(doc,page);
+    session={name,admin:true,data,k:u8b64(kRaw),page};
+    try{sessionStorage.setItem(SESS,JSON.stringify(session))}catch(_){}
+    $("#suPass").value=$("#suData").value=$("#suPage").value="";gateMsg("");enterApp();
+  }catch(err){gateMsg("Не се записа ("+(err.code||"грешка")+"). Ключът за страницата трябва да може да пише.")}
+});
+$("#logout").addEventListener("click",()=>{try{sessionStorage.removeItem(SESS)}catch(_){}location.reload()});
+
+/* ---------- logins screen (only for logins that hand out logins) ---------- */
+let confirmUser=null;
+function renderUsers(){
+  const list=(usersDoc&&usersDoc.users)||[];
+  $("#ulist").innerHTML=list.map((u,i)=>`<div class="u"><span>${esc(u.name)}${u.admin?` <span class="hint">· дава входове</span>`:""}</span>${sameName(u.name,session.name)?`<span class="hint">ти</span>`:`<button class="ghost danger" data-udel="${i}">${confirmUser===i?"махни?":"Махни"}</button>`}</div>`).join("")||`<div class="empty">—</div>`;
+}
+async function refreshUsers(){try{await loadUsers()}catch(_){}renderUsers()}
+function uMsg(t){$("#uMsg").textContent=t||""}
+$("#v-users").addEventListener("click",async e=>{
+  const b=e.target.closest("button");if(!b||!session||!session.admin)return;
+  if(b.dataset.udel!==undefined){const i=+b.dataset.udel;if(confirmUser!==i){confirmUser=i;renderUsers();return}
+    confirmUser=null;await refreshUsers();const doc=JSON.parse(JSON.stringify(usersDoc));const gone=doc.users.splice(i,1)[0];
+    try{await saveUsers(doc,session.page);uMsg("Махнат: "+gone.name)}catch(err){uMsg("Не се записа ("+(err.code||"грешка")+").")}renderUsers();return}
+  if(b.id==="nuAdd"){
+    const name=$("#nuName").value.trim(),pw=$("#nuPass").value,admin=$("#nuAdmin").checked;
+    if(!name){uMsg("Напиши име.");return}if(pw.length<8){uMsg("Паролата трябва да е поне 8 знака.");return}
+    uMsg("Записвам…");await refreshUsers();
+    const doc=JSON.parse(JSON.stringify(usersDoc||{v:1,users:[]}));
+    if(doc.users.some(u=>sameName(u.name,name))){uMsg("Това име вече има вход.");return}
+    try{doc.users.push(await makeLogin(name,pw,admin,b64u8(session.k),session.page));await saveUsers(doc,session.page);
+      $("#nuName").value=$("#nuPass").value="";$("#nuAdmin").checked=false;uMsg("Добавен: "+name+". Дай му името и паролата.")}
+    catch(err){uMsg("Не се записа ("+(err.code||"грешка")+").")}
+    renderUsers();return}
+  if(b.id==="nkSave"){
+    const data=$("#nkData").value.trim();if(!data)return;uMsg("Проверявам ключа…");
+    const d=await gh(`/repos/${GH_OWNER}/${DATA_REPO}`,{},data).catch(()=>null);
+    if(!d||!d.ok){uMsg("Ключът не отваря saglasuvaniya-data.");return}
+    await refreshUsers();const doc=JSON.parse(JSON.stringify(usersDoc));
+    try{doc.vault=await seal(await aesKey(b64u8(session.k)),{data});await saveUsers(doc,session.page);
+      session.data=data;try{sessionStorage.setItem(SESS,JSON.stringify(session))}catch(_){}
+      $("#nkData").value="";uMsg("Ключът е сменен за всички входове.")}
+    catch(err){uMsg("Не се записа ("+(err.code||"грешка")+").")}
+  }
+});
+function showBanner(t){const b=$("#banner");b.innerHTML=t;b.hidden=false}
+function hideBanner(){const b=$("#banner");if(!/само/.test(b.textContent))b.hidden=true}
+
+const dirty=new Set(), timers={}, chains={}, edits={};
+/* project log: one line per real change, same line twice a day only once */
+function logIt(p,k,text){p.log=p.log||[];const d=todayStr(),t=(k?k+" · ":"")+text;
+  const same=p.log.findIndex(x=>x.d===d&&x.t.split(":")[0]===t.split(":")[0]);if(same>=0)p.log.splice(same,1);
+  p.log.push({d,t});if(p.log.length>300)p.log.splice(0,p.log.length-300)}
+function saveSoon(id){if(!canWrite)return;if(projects[id])projects[id].updated=todayStr();dirty.add(id);edits[id]=(edits[id]||0)+1;clearTimeout(timers[id]);timers[id]=setTimeout(()=>{timers[id]=null;flush(id)},600)}
+function flush(id){
+  const p=projects[id];if(!p)return;
+  dirty.add(id);
+  const v=edits[id]||0, body=JSON.parse(JSON.stringify(p));
+  chains[id]=(chains[id]||Promise.resolve()).then(()=>store.set(id,body)).then(()=>{if((edits[id]||0)===v&&!timers[id])dirty.delete(id)}).catch(e=>{
+    showBanner(e&&e.code==="quota_exceeded"?"Мястото за данни е пълно. Изтрий стари проекти.":"Промяната не се записа ("+esc(e&&e.code||"грешка")+"). Опитай пак.");
+  });
+}
+
+/* ---------- view state ---------- */
+let filter="all", open=null, sel=null, dsel=null, confirmDel=null, confirmPlot=null, query="";
+try{const f=localStorage.getItem("pt_filter2");if(f)filter=f}catch(e){}
+
+function newProject(){
+  return{client:"",ident:"",address:"",municipality:"Аврен",plots:[],pvBy:{},note:"",closed:false,created:new Date().toISOString(),v:MODEL,
+    specs:AVREN_SPECS.map(n=>({name:n,by:{}})),steps:TEMPLATE.map(stepFromTemplate),docs:DOCS.map(n=>({name:n,by:{}}))};
+}
+function pname(p){return p.client||p.ident||"Без име"}
+/* where a filed step sits: by step key */
+const AT={visa:"Общината",vik_data:"ВиК",vik_visa:"ВиК",ep_opinion:"Енерго Про",ep_visa:"Енерго Про",rosv:"РИОСВ",supervisor:"Надзор",permit:"Общината",permit_force:"Общината",tech_control:"Технически контрол",geo:"Геозащита"};
+function dueState(due,today){if(!due)return"wait";if(due<today)return"late";if(daysBetween(today,due)<=7)return"soon";return"wait"}
+function items(p,id,today){
+  const out=[];
+  plotKeys(p).forEach(k=>{
+    p.steps.forEach(s=>{const st=status(p,s,k,today);if(!["late","soon","fix","go","wait"].includes(st))return;const c=cellOf(s,k);
+      out.push({id,p,k,st,what:s.name,at:(st==="go"||st==="fix")?"При нас":(AT[s.key]||"Друго"),sent:c.date,due:addTerm(c.date,s.term),reg:c.reg,note:c.note,goto:s.key})});
+    const a=archOf(p,k);
+    if(a.stage!=="ready"&&a.stage!=="work"){
+      const at=a.wait==="client"?"Клиент":a.wait==="spec"?"Инженер":a.wait==="other"?"Друго":"При нас";
+      out.push({id,p,k,st:a.wait?"wait":"arch",what:"Архитектура: "+ARCH_TEXT[a.stage||"not"]+(a.what?" ("+a.what+")":""),at,sent:a.since,due:"",reg:"",note:a.note,goto:""})}
+    (p.specs||[]).forEach(s=>{const v=(s.by||{})[k]||"not";if(v==="ready")return;
+      const eng=personName(s.eng)||s.who||"";
+      if(v==="sent"){const st=dueState(s.due,today);out.push({id,p,k,st,what:s.name,at:"Инженер"+(eng?" "+eng:""),sent:s.sent,due:s.due,reg:"",note:s.note,goto:""})}
+      else if(v==="back")out.push({id,p,k,st:"fix",what:s.name+" — въпроси от инженера",at:"При нас",sent:s.sent,due:s.due,reg:"",note:s.note,goto:""})});
+  });
+  return out;
+}
+function counts(p,id,today){const it=items(p,id,today);const c={late:0,soon:0,fix:0,go:0,wait:0,arch:0};it.forEach(x=>c[x.st]++);return c}
+function matches(p){if(!query)return true;const q=query.toLowerCase();return[p.client,p.ident,p.address,p.note,p.municipality,(p.plots||[]).join(" "),Object.values(p.plotInfo||{}).map(x=>[x.upi,x.pi,x.investor].join(" ")).join(" ")].some(v=>String(v||"").toLowerCase().includes(q))}
+
+/* ---------- render ---------- */
+let rq=false,pendingRender=false;
+function renderSoon(){if(rq)return;rq=true;requestAnimationFrame(()=>{rq=false;render()})}
+function typing(){const ae=document.activeElement;return ae&&ae.closest&&ae.closest(".ed")&&ae.matches("input[type=text],input:not([type]),textarea,input[type=number]")}
+function render(){
+  if(typing()){pendingRender=true;renderSummary();return}
+  pendingRender=false;renderSummary();renderList();renderViews();
+}
+let view="main";try{const v=localStorage.getItem("pt_view");if(v)view=v}catch(e){}
+function renderViews(){
+  if(view==="users"&&!(session&&session.admin))view="main";
+  if(view!=="people"&&view!=="users")view="main";
+  $("#v-people").hidden=view!=="people";
+  const uWas=$("#v-users").hidden;$("#v-users").hidden=view!=="users";
+  if(view==="users"&&uWas)refreshUsers();
+  if(view==="people"&&!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest("#people")&&document.activeElement.matches("input")))renderPeople();
+}
+/* overview: one row per plot - architecture stage, specialities, approvals, forecast */
+function renderOverview(){
+  const today=todayStr();
+  const rows=[];
+  Object.entries(projects).filter(([id,p])=>!p.closed&&matches(p)).forEach(([id,p])=>plotKeys(p).forEach(k=>{
+    const a=archOf(p,k),sp=p.specs||[];
+    const sReady=sp.filter(s=>(s.by||{})[k]==="ready").length,sSent=sp.filter(s=>["sent","back"].includes((s.by||{})[k])).length;
+    const st=p.steps.filter(s=>!skipped(p,s,k)),stDone=st.filter(s=>isDone(p,s,k)).length,stOpen=st.filter(s=>["filed","waiting","remarks"].includes(cellOf(s,k).state)).length;
+    const f=forecast(p,k,today),c=counts(p,id,today);
+    rows.push({id,p,k,a,sReady,sSent,sAll:sp.length,stDone,stOpen,stAll:st.length,f,late:c.late});
+  }));
+  rows.sort((x,y)=>String(x.f&&x.f.date||"9").localeCompare(String(y.f&&y.f.date||"9")));
+  if(!rows.length){$("#overview").innerHTML='<div class="empty">—</div>';return}
+  const totLeft=rows.reduce((m,r)=>m+(r.sAll-r.sReady)+(archReady(r.p,r.k)?0:1),0);
+  $("#overview").innerHTML=`<div class="hint">Парцели: ${rows.length} · незавършени части: ${totLeft} · закъснели: ${rows.reduce((m,r)=>m+r.late,0)}</div>
+  <div class="mx-wrap"><table class="st"><thead><tr><th>Проект</th><th>Парцел</th><th>Архитектура</th><th>Чакаме</th><th>Специалности готови</th><th>Подадени към инженер</th><th>Съгласувания готови</th><th>Подадени</th><th>Разрешение (РС)</th><th>Последна промяна</th></tr></thead><tbody>${rows.map(r=>
+    `<tr data-goto="${esc(r.id)}||${esc(r.k)}"><td>${esc(pname(r.p))}</td><td class="mono">${esc(r.k||"—")}</td><td>${esc(ARCH_TEXT[r.a.stage||"not"])}</td><td>${r.a.wait?esc((ARCH_WAIT.find(x=>x[0]===r.a.wait)||["",""])[1])+(r.a.since?" от "+bgShort(r.a.since):""):"—"}</td>
+    <td class="mono">${r.sReady}/${r.sAll}</td><td class="mono">${r.sSent}</td><td class="mono">${r.stDone}/${r.stAll}</td><td class="mono">${r.stOpen}</td>
+    <td class="mono">${r.f&&r.f.done?"готов":r.f&&r.f.date?"~"+bg(r.f.date):"?"}</td>
+    <td class="mono">${r.p.updated?bgShort(r.p.updated)+(daysBetween(r.p.updated,today)>14?` <span class="danger">${daysBetween(r.p.updated,today)} д. без движение</span>`:""):"—"}</td></tr>`).join("")}</tbody></table></div>`;
+}
+/* engineers list with their open work */
+function renderPeople(){
+  const today=todayStr();
+  const work={};
+  Object.entries(projects).filter(([id,p])=>!p.closed).forEach(([id,p])=>(p.specs||[]).forEach(s=>{if(!s.eng)return;
+    const open=plotKeys(p).filter(k=>((s.by||{})[k]||"not")!=="ready");if(!open.length)return;
+    (work[s.eng]=work[s.eng]||[]).push({id,p,s,open})}));
+  const ro=canWrite?"":" disabled";
+  let h=`<div class="mx-wrap"><table class="st"><thead><tr><th>Име</th><th>Специалност</th><th>Телефон</th><th>Имейл</th><th>Отворени</th><th></th></tr></thead><tbody>`;
+  Object.entries(people).sort((a,b)=>a[1].name.localeCompare(b[1].name)).forEach(([pid,x])=>{
+    const w=work[pid]||[];
+    h+=`<tr data-pid="${esc(pid)}"><td><input type="text" id="pn-${esc(pid)}" data-pk="name" value="${esc(x.name)}"${ro}></td><td><input type="text" id="ps-${esc(pid)}" data-pk="spec" value="${esc(x.spec)}" list="specnames"${ro}></td>
+      <td><input type="tel" id="pp-${esc(pid)}" data-pk="phone" value="${esc(x.phone)}"${ro}>${x.phone?` <a class="tel" href="tel:${esc(String(x.phone).replace(/\s/g,""))}">звънни</a>`:""}</td>
+      <td><input type="email" id="pe-${esc(pid)}" data-pk="email" value="${esc(x.email)}"${ro}></td>
+      <td>${w.length?w.map(o=>`${esc(pname(o.p))} · ${esc(o.s.name)} (${esc(o.open.join(", "))})${o.s.due?` · срок ${bgShort(o.s.due)}${o.s.due<today?' <span class="danger">просрочен</span>':""}`:""}`).join("<br>"):"—"}</td>
+      <td>${canWrite?`<button class="ghost x danger" data-pdel="${esc(pid)}">${confirmPerson===pid?"махни?":"×"}</button>`:""}</td></tr>`});
+  h+=`</tbody></table></div>`;
+  if(canWrite)h+=`<div class="row" style="margin-top:8px"><input type="text" id="npn" placeholder="име" style="max-width:200px"><input type="text" id="nps" placeholder="специалност" list="specnames" style="max-width:160px"><input type="tel" id="npp" placeholder="телефон" style="max-width:160px"><button data-padd="1">Добави инженер</button></div>`;
+  $("#people").innerHTML=h;
+}
+let confirmPerson=null;
+document.addEventListener("focusout",()=>{setTimeout(()=>{if(pendingRender&&!typing())render()},0)});
+
+function renderSummary(){
+  const today=todayStr();
+  $("#today").textContent="Днес е "+bg(today);
+  if(!ready){$("#wait").innerHTML='<div class="empty">Зареждам…</div>';return}
+  const ids=Object.keys(projects).filter(id=>!projects[id].closed);
+  const all=[];ids.forEach(id=>all.push(...items(projects[id],id,today)));
+  const n=k=>all.filter(x=>x.st===k).length;
+  const tiles=[["late","t-late","Закъснели"],["soon","t-soon","Срок до 7 дни"],["fix","t-fix","Забележки"],["go","t-go","За подаване"]];
+  $("#tiles").innerHTML=tiles.map(t=>`<button class="tile ${t[1]}" data-filter="${t[0]}" aria-pressed="${filter===t[0]}"><span class="n mono">${n(t[0])}</span><span class="l">${t[2]}</span></button>`).join("");
+  const order={late:0,fix:1,soon:2,go:3,arch:4,wait:5};
+  const rows=all.filter(x=>filter==="all"||x.st===filter).filter(x=>matches(x.p))
+    .sort((a,b)=>order[a.st]-order[b.st]||String(a.due||"9").localeCompare(String(b.due||"9"))||pname(a.p).localeCompare(pname(b.p)));
+  $("#waitTitle").textContent=filter==="all"?"Статус":({late:"Закъснели",soon:"Срок до 7 дни",fix:"Забележки",go:"За подаване"})[filter];
+  $("#waitHint").innerHTML=filter==="all"?"":`<button class="ghost" data-filter="all">всички</button>`;
+  $("#wait").innerHTML=rows.length?`<div class="mx-wrap"><table class="st"><thead><tr><th>Проект</th><th>Парцел</th><th>Какво</th><th>Къде е</th><th>Подадено</th><th>Срок</th><th>Статус</th></tr></thead><tbody>${rows.map(r=>
+    `<tr data-goto="${esc(r.id)}|${esc(r.goto)}|${esc(r.k)}"><td>${esc(pname(r.p))}</td><td class="mono">${esc(r.k||"—")}</td><td>${esc(r.what)}${r.reg?` <span class="hint">вх. № ${esc(r.reg)}</span>`:""}${r.note?` <span class="hint">${esc(r.note)}</span>`:""}</td><td>${esc(r.at)}</td><td class="mono">${r.sent?bgShort(r.sent):"—"}</td><td class="mono">${r.due?bgShort(r.due):"—"}${r.st==="late"?` <span class="danger">+${daysBetween(r.due,today)} д.</span>`:""}</td><td><span class="pill ${STATUS_PILL[r.st]}">${STATUS_TEXT[r.st]}</span></td></tr>`).join("")}</tbody></table></div>`
+    :`<div class="empty">—</div>`;
+}
+function renderList(){
+  const today=todayStr();
+  if(!ready)return;
+  const showClosed=$("#showClosed").checked;
+  let ids=Object.keys(projects).filter(id=>showClosed||!projects[id].closed).filter(id=>matches(projects[id]));
+  ids.sort((a,b)=>{const A=projects[a],B=projects[b],ca=counts(A,a,today),cb=counts(B,b,today);
+    return(A.closed-B.closed)||(cb.late-ca.late)||(cb.soon-ca.soon)||(cb.fix-ca.fix)||(cb.go-ca.go)||String(B.created||"").localeCompare(String(A.created||""))});
+  $("#listTitle").textContent="Проекти";
+  if(!ids.length){
+    $("#list").innerHTML=Object.keys(projects).length?'<div class="empty">Няма проекти по този избор.</div>'
+      :'<div class="panel"><b>Още няма проекти.</b><span class="empty">Натисни „+ Нов проект“, попълни името и парцелите. Стъпките и сроковете се слагат сами.</span></div>';
+  }else $("#list").innerHTML=ids.map(id=>card(id,projects[id],today)).join("");
+}
+
+function fcText(f){
+  if(!f)return"";
+  if(f.done)return"РС: издадено"+(f.date?" "+bgShort(f.date):"");
+  if(f.date)return"РС ~"+bg(f.date)+(f.specsLeft?` · неготови части: ${f.specsLeft}`:"");
+  return"РС: ? (няма срок: "+f.miss.join(", ")+")";
+}
+/* overall status of one plot: where the project is in its whole path */
+function phase(p,k,today){
+  const st=key=>{const s=stepByKey(p,key);return s?cellOf(s,k).state:"not"};
+  const late=p.steps.some(s=>status(p,s,k,today)==="late");
+  const red=c=>late?"p-late":c;
+  if(st("permit_force")==="done")return{text:"Разрешение в сила",cls:"p-ok"};
+  if(st("permit")==="done")return{text:"Разрешение издадено",cls:"p-ok"};
+  if(["filed","waiting","remarks"].includes(st("permit")))return{text:"Внесен за разрешение",cls:red("p-wait")};
+  if(st("supervisor")==="remarks")return{text:"Надзор — забележки",cls:"p-fix"};
+  if(["filed","waiting"].includes(st("supervisor")))return{text:"При надзора",cls:red("p-wait")};
+  if(st("supervisor")==="done")return{text:"Готов за внасяне",cls:"p-go"};
+  if(p.steps.some(s=>!["supervisor","permit","permit_force"].includes(s.key)&&!skipped(p,s,k)&&cellOf(s,k).state!=="not"))return{text:"Съгласуване",cls:red("p-wait")};
+  const a=archOf(p,k);
+  return{text:"Проектиране — "+ARCH_TEXT[a.stage||"not"].toLowerCase(),cls:"p-not"};
+}
+/* the latest thing that happened on a plot: from the log, else from the dates in the data */
+function lastStep(p,k){
+  const c=[];
+  (p.log||[]).forEach((x,i)=>{const pre=k?k+" · ":"";if(!k||x.t.startsWith(pre)||!/^[^·]+ · /.test(x.t))c.push({d:x.d,t:k&&x.t.startsWith(pre)?x.t.slice(pre.length):x.t,o:1000+i})});
+  p.steps.forEach((s,i)=>{const x=cellOf(s,k);if(x.ans)c.push({d:x.ans,t:s.name+": отговор",o:i});else if(x.date)c.push({d:x.date,t:s.name+": "+(s.from?s.from.toLowerCase():"подадено"),o:i})});
+  const a=archOf(p,k);if(a.since)c.push({d:a.since,t:"Архитектура: чакаме "+((ARCH_WAIT.find(x=>x[0]===a.wait)||["",""])[1]),o:-1});
+  (p.specs||[]).forEach(s=>{if(s.sent)c.push({d:s.sent,t:s.name+": подадена към инженера",o:-2})});
+  if(!c.length)return null;
+  c.sort((x,y)=>x.d.localeCompare(y.d)||x.o-y.o);return c[c.length-1];
+}
+function card(id,p,today){
+  const inv=[...new Set(plotKeys(p).map(k=>((p.plotInfo||{})[k]||{}).investor).filter(Boolean))].join(", ");
+  const meta=[p.ident&&p.client?`<span class="mono">${esc(p.ident)}</span>`:"",inv&&!p.client?esc(inv):"",esc(p.address),p.municipality?"общ. "+esc(p.municipality):""].filter(Boolean).join(" · ");
+  const lines=plotKeys(p).map(k=>{const ph=phase(p,k,today),ls=lastStep(p,k);
+    return`<div class="pl"><span class="mono">${esc(plotLabel(k))}</span><span class="pill ${ph.cls}">${esc(ph.text)}</span><span class="last">${ls?esc(ls.t)+` <span class="mono hint">${bgShort(ls.d)}</span>`:"—"}</span></div>`}).join("");
+  let h=`<article class="card" id="c-${esc(id)}">
+  <div class="card-head row2" data-toggle="${esc(id)}" tabindex="0" role="button" aria-expanded="${open===id}">
+    <div style="min-width:0"><div class="name">${esc(pname(p))}${p.closed?' <span class="pill p-ok">приключен</span>':""}</div><div class="meta">${meta}</div></div>
+    <div class="pls">${lines}</div>
+  </div>`;
+  if(open===id)h+=editor(id,p,today);
+  return h+"</article>";
+}
+
+function opt(list,val){return list.map(([v,t])=>`<option value="${v}"${v===val?" selected":""}>${t}</option>`).join("")}
+function cellButton(p,s,k,today,isSel){
+  const st=status(p,s,k,today),c=cellOf(s,k),due=addTerm(c.date,s.term);
+  let line="";
+  if(st==="done")line=c.ans?bgShort(c.ans):"";
+  else if(st==="late"||st==="soon"||st==="wait")line=due?"до "+bgShort(due):"пусната "+bgShort(c.date);
+  else if(st==="fix"){const left=(c.remarks||[]).filter(x=>rs(x)==="open").length;line=left?left+" за оправяне":"пусни отново"}
+  else if(st==="go")line=s.from&&!c.date?"":"";
+  return`<button class="sc k-${st}${isSel?" sel":""}" data-sel="${esc(s.key)}|${esc(k)}" aria-pressed="${isSel}"><b>${STATUS_TEXT[st]}</b>${line?`<span class="mono">${line}</span>`:""}</button>`;
+}
+function editor(id,p,today){
+  const ro=canWrite?"":" disabled", keys=plotKeys(p);
+  if(!sel||sel.id!==id||!stepByKey(p,sel.key)||!keys.includes(sel.k))sel=null;
+  let h=`<div class="ed" data-id="${esc(id)}">
+  <div class="grid4">
+    <label class="f">Клиент<input type="text" id="cl-${esc(id)}" data-f="client" value="${esc(p.client)}"${ro}></label>
+    <label class="f">Телефон на клиента<input type="tel" id="ct-${esc(id)}" data-f="phone" value="${esc(p.phone)}"${ro}></label>
+    <label class="f">Идентификатор (напр. 71/76 Приселци)<input type="text" id="id-${esc(id)}" data-f="ident" value="${esc(p.ident)}"${ro}></label>
+    <label class="f">Село / адрес<input type="text" id="ad-${esc(id)}" data-f="address" value="${esc(p.address)}"${ro}></label>
+    <label class="f">Община<input type="text" id="mu-${esc(id)}" data-f="municipality" list="munis" value="${esc(p.municipality)}"${ro}></label>
+  </div>
+  <div><h2 style="margin-bottom:6px">Парцели</h2><div class="plots">`;
+  keys.forEach(k=>{const pi=(p.plotInfo&&p.plotInfo[k])||{},pk=esc(id)+"-"+esc(k);
+    h+=`<div class="plot pcard" data-plotk="${esc(k)}"><b>${esc(plotLabel(k))}</b>
+      <label class="f">УПИ<input type="text" id="pu-${pk}" data-pi="upi" value="${esc(pi.upi)}" placeholder="XXXV-52, кв.64"${ro}></label>
+      <label class="f">ПИ<input type="text" id="pp-${pk}" data-pi="pi" value="${esc(pi.pi)}" class="mono" placeholder="58445.96.71"${ro}></label>
+      <label class="f">Възложител<input type="text" id="pw-${pk}" data-pi="investor" value="${esc(pi.investor)}"${ro}></label>
+      <label class="check"><input type="checkbox" id="pv-${pk}" data-pv="${esc(k)}"${p.pvBy&&p.pvBy[k]?" checked":""}${ro}> фотоволтаици (без Енерго Про)</label>${canWrite&&k?`<button class="ghost x${confirmPlot===id+"|"+k?" danger":""}" data-delplot="${esc(k)}" aria-label="Махни парцел ${esc(k)}">${confirmPlot===id+"|"+k?"махни?":"×"}</button>`:""}</div>`});
+  if(canWrite)h+=`<div class="plot" style="padding:4px"><input type="text" id="np-${esc(id)}" placeholder="УПИ, напр. 71" style="width:120px"><button data-addplot="1">Добави парцел</button></div>`;
+  h+=`</div></div>`;
+
+  h+=`<div><h2 style="margin-bottom:6px">Архитектура</h2><label class="f" style="max-width:280px;margin-bottom:8px">Проектант<input type="text" id="ar-${esc(id)}" data-f="architect" value="${esc(p.architect)}" placeholder="арх. …"${ro}></label><div class="arch">`;
+  keys.forEach(k=>{const a=archOf(p,k),ai=ARCH_ORDER.indexOf(a.stage||"not"),pk=esc(id)+"-"+esc(k);
+    h+=`<div class="archc" data-arch="${esc(k)}"><div class="ttl">${esc(plotLabel(k))}</div>
+      <div class="stage">${ARCH_ORDER.slice(1).map((x,j)=>`<i class="${j<ai?"on":""}" title="${esc(ARCH_TEXT[x])}"></i>`).join("")}</div>
+      <label class="f wide">Етап<select id="as-${pk}" data-ak="stage"${ro}>${opt(ARCH_STAGES,a.stage||"not")}</select></label>
+      <label class="f">Чакаме<select id="aw-${pk}" data-ak="wait"${ro}>${opt(ARCH_WAIT,a.wait||"")}</select></label>
+      <label class="f">От дата<input type="date" id="ad-${pk}" data-ak="since" value="${esc(a.since)}"${ro}></label>
+      <label class="f wide">Какво чакаме / бележка<input type="text" id="an-${pk}" data-ak="what" value="${esc(a.what)}" placeholder="напр. одобрение на идейния, данни от геодезист"${ro}></label>
+    </div>`});
+  h+=`</div></div>`;
+  h+=`<div><h2 style="margin-bottom:6px">Специалности</h2><div class="mx-wrap"><table class="mx"><thead><tr><th class="sn"></th>`;
+  keys.forEach(k=>{h+=`<th class="mono">${esc(plotLabel(k))}</th>`});
+  h+=`<th>Инженер</th><th>Телефон</th><th>Подадена</th><th>Срок от инженера</th></tr></thead><tbody>`;
+  (p.specs||[]).forEach((s,i)=>{
+    const late=s.due&&s.due<today&&keys.some(k=>((s.by||{})[k]||"not")==="sent");
+    const per=s.eng&&people[s.eng];
+    h+=`<tr><td class="sn">${esc(s.name)}${canWrite?` <button class="ghost x" data-delspec="${i}" aria-label="Махни ${esc(s.name)}">×</button>`:""}</td>`;
+    keys.forEach(k=>{const v=(s.by||{})[k]||"not";h+=`<td><button class="cell c-${v}" data-cell="${i}" data-plot="${esc(k)}" title="${SPEC_TEXT[v]}" aria-label="${esc(s.name)} ${esc(plotLabel(k))}: ${SPEC_TEXT[v]}"${ro}>${CELL_MARK[v]}</button></td>`});
+    h+=`<td><select id="se-${esc(id)}-${i}" data-si="${i}" data-sk="eng" style="width:170px"${ro}>${engOptions(s)}</select></td>
+      <td>${per&&per.phone?`<a class="tel" href="tel:${esc(per.phone.replace(/\s/g,""))}">${esc(per.phone)}</a>`:`<span class="hint">—</span>`}</td>
+      <td><input type="date" id="ss-${esc(id)}-${i}" data-si="${i}" data-sk="sent" value="${esc(s.sent)}" style="width:150px"${ro}></td>
+      <td><input type="date" id="sd-${esc(id)}-${i}" data-si="${i}" data-sk="due" value="${esc(s.due)}" style="width:150px${late?";border-color:var(--late);color:var(--late)":""}"${ro}></td></tr>`});
+  h+=`</tbody></table></div><div class="hint" style="margin-top:4px">Квадратче при всеки клик: празно (не е подадена) → при инженера → ? (върната с въпроси) → ✓ (готова).</div>`;
+  if(canWrite){
+    h+=`<div class="row" style="margin-top:8px"><input type="text" id="ns-${esc(id)}" placeholder="друга специалност" style="max-width:200px"><button data-addspec="1">Добави</button>`;
+    EXTRA_SPECS.filter(n=>!(p.specs||[]).some(s=>s.name===n)).forEach(n=>{h+=`<button data-quickspec="${esc(n)}">+ ${esc(n)}</button>`});
+    h+=`</div>`;
+  }
+  h+=`</div>`;
+
+  h+=`<div><h2 style="margin-bottom:6px">Съгласувания</h2><div class="mx-wrap"><table class="mx"><thead><tr><th class="sn">Стъпка</th>`;
+  keys.forEach(k=>{h+=`<th class="mono">${esc(plotLabel(k))}</th>`});
+  h+=`</tr></thead><tbody>`;
+  p.steps.forEach((s,i)=>{
+    const after=(s.after||[]).map(a=>stepByKey(p,a)).filter(Boolean).map(t=>t.name.split(" — ")[0]==="ВиК"||t.name.split(" — ")[0]==="Енерго Про"?t.name:t.name.split(" — ")[0]);
+    h+=`<tr><td class="sn">${esc(s.name)}<small>${s.term?termText(s.term):"срок?"}${after.length?" · след "+esc(after.join(", ")):""}${s.specs?" · и готови специалности":""}</small></td>`;
+    keys.forEach(k=>{h+=`<td>${cellButton(p,s,k,today,sel&&sel.key===s.key&&sel.k===k)}</td>`});
+    h+=`</tr>`});
+  h+=`</tbody></table></div><div class="hint" style="margin-top:4px">Натисни клетка, за да я попълниш.</div>`;
+  if(sel)h+=cellEditor(id,p,stepByKey(p,sel.key),sel.k,today,ro);
+  h+=`<div class="fc" style="margin-top:12px">${keys.map(k=>`<div><span class="mono">${esc(plotLabel(k))}</span><span>${esc(fcText(forecast(p,k,today)))}</span></div>${timeline(p,k,today)}`).join("")}</div>`;
+  if(canWrite)h+=`<div class="row" style="margin-top:10px"><input type="text" id="nst-${esc(id)}" placeholder="друга стъпка" style="max-width:260px"><button data-addstep="1">Добави стъпка</button>${EXTRA_STEPS.filter(x=>!stepByKey(p,x.key)).map(x=>`<button data-quickstep="${x.key}">+ ${esc(x.name)}</button>`).join("")}</div>`;
+  h+=`</div>`;
+
+  h+=docsSection(id,p,keys,ro);
+  {const lg=(p.log||[]).slice().reverse();
+    h+=`<div><h2 style="margin-bottom:6px">Дневник</h2>${lg.length?`<div class="mx-wrap" style="max-height:260px;overflow-y:auto"><table class="st"><tbody>${lg.slice(0,100).map(x=>`<tr><td class="mono" style="width:90px">${bg(x.d)}</td><td>${esc(x.t)}</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty">—</div>`}
+    ${canWrite?`<div class="row" style="margin-top:6px"><input type="text" id="lg-${esc(id)}" placeholder="запис в дневника (разговор, решение)" style="max-width:420px"><button data-logadd="1">Запиши</button></div>`:""}</div>`}
+  h+=`<label class="f">Бележки по проекта<textarea id="no-${esc(id)}" data-f="note"${ro}>${esc(p.note)}</textarea></label>
+  <label class="check"><input type="checkbox" id="cz-${esc(id)}" data-f="closed"${p.closed?" checked":""}${ro}> Проектът е приключен</label>`;
+  if(canWrite){
+    h+=confirmDel===id?`<div class="confirm">Да изтрия ли „${esc(pname(p))}“? Не може да се върне.<button class="danger" data-delyes="1">Изтрий</button><button data-delno="1">Откажи</button></div>`
+      :`<div class="row end"><span class="hint">Записва се само.</span><button class="ghost danger" data-del="1">Изтрий проекта</button></div>`;
+  }
+  return h+"</div>";
+}
+function docCell(d,k){return(d.by&&d.by[k])||{have:"no",where:"",date:"",note:""}}
+function docsSection(id,p,keys,ro){
+  if(!dsel||dsel.id!==id||!p.docs[dsel.i]||!keys.includes(dsel.k))dsel=null;
+  let h=`<div><h2 style="margin-bottom:6px">Документи — имаме ли ги и къде са</h2><div class="mx-wrap"><table class="mx"><thead><tr><th class="sn">Документ</th>`;
+  keys.forEach(k=>{h+=`<th class="mono">${esc(plotLabel(k))}</th>`});
+  h+=`</tr></thead><tbody>`;
+  p.docs.forEach((d,i)=>{
+    h+=`<tr><td class="sn">${esc(d.name)}${canWrite?` <button class="ghost x" data-deldoc="${i}" aria-label="Махни ${esc(d.name)}">×</button>`:""}</td>`;
+    keys.forEach(k=>{const c=docCell(d,k),on=dsel&&dsel.i===i&&dsel.k===k;
+      h+=`<td><button class="sc h-${c.have}${on?" sel":""}" data-dsel="${i}|${esc(k)}" aria-pressed="${on}"><b>${HAVE_TEXT[c.have]||"нямаме"}</b>${c.where?`<span>${esc(c.where)}</span>`:""}</button></td>`});
+    h+=`</tr>`});
+  h+=`</tbody></table></div>`;
+  if(dsel){const d=p.docs[dsel.i],c=docCell(d,dsel.k),pid=esc(id)+"-"+dsel.i+"-"+esc(dsel.k);
+    h+=`<div class="cedit" style="margin-top:10px" data-doc="${dsel.i}" data-k="${esc(dsel.k)}">
+      <div class="row end"><div class="ttl"><span>${esc(plotLabel(dsel.k))}</span>${esc(d.name)}</div><button class="ghost" data-dclose="1">Затвори</button></div>
+      <div class="cgrid">
+        <label class="f">Имаме ли го<select id="dh-${pid}" data-dc="have"${ro}>${opt(HAVE,c.have)}</select></label>
+        <label class="f">Къде е сега<input type="text" id="dw-${pid}" data-dc="where" list="wheres" value="${esc(c.where)}" placeholder="при нас"${ro}></label>
+        <label class="f">От дата<input type="date" id="dd-${pid}" data-dc="date" value="${esc(c.date)}"${ro}></label>
+        <label class="f" style="grid-column:span 2">Бележка<input type="text" id="dn-${pid}" data-dc="note" value="${esc(c.note)}" placeholder="напр. оригиналът е в папката"${ro}></label>
+      </div>
+      <div class="row">${WHERE.map(w=>`<button class="pill ${c.where===w?"p-wait":"p-not"}" data-dwhere="${esc(w)}"${ro}>${esc(w)}</button>`).join("")}</div>
+      ${filesBlock(c.files,ro,"doc")}
+    </div>`}
+  if(canWrite)h+=`<div class="row" style="margin-top:8px"><input type="text" id="nd-${esc(id)}" placeholder="друг документ" style="max-width:260px"><button data-adddoc="1">Добави документ</button></div>`;
+  return h+`</div>`;
+}
+function cellEditor(id,p,s,k,today,ro){
+  const c=cellOf(s,k), st=status(p,s,k,today), due=addTerm(c.date,s.term), b=blockers(p,s,k), t=s.term||{n:"",u:"w"};
+  const pid=esc(id)+"-"+esc(s.key)+"-"+esc(k);
+  let dueTxt=due?bg(due):(s.term?"—":"срокът не е известен");
+  if(st==="late")dueTxt+=` · закъснява ${daysBetween(due,today)} дни`;else if(st==="soon")dueTxt+=` · след ${daysBetween(today,due)} дни`;
+  let h=`<div class="cedit" style="margin-top:10px" data-key="${esc(s.key)}" data-k="${esc(k)}">
+    <div class="row end"><div class="ttl"><span>${esc(plotLabel(k))}</span>${esc(s.name)}</div><span class="pill ${STATUS_PILL[st]}">${STATUS_TEXT[st]}</span></div>`;
+  if(skipped(p,s,k))h+=`<div class="hint">С фотоволтаици — тази стъпка не се прави за ${esc(plotLabel(k))}.</div>`;
+  if(b.length&&c.state==="not")h+=`<div class="hint">Чака: ${esc(b.join(", "))}.</div>`;
+  h+=`<div class="cgrid">
+      <label class="f">Състояние<select id="cs-${pid}" data-c="state"${ro}>${opt(STATES,c.state)}</select></label>
+      <label class="f">${esc(s.from||"Пусната на")}<input type="date" id="cd-${pid}" data-c="date" value="${esc(c.date)}"${ro}></label>
+      <label class="f">Вх. №<input type="text" id="cr-${pid}" data-c="reg" value="${esc(c.reg)}" class="mono"${ro}></label>
+      <label class="f">Срок (за всички парцели)<span class="term"><input type="number" min="0" step="1" id="tn-${pid}" data-term="n" value="${esc(t.n)}" aria-label="число"${ro}><select id="tu-${pid}" data-term="u" aria-label="мярка"${ro}>${opt(UNITS,t.u)}</select></span></label>
+      <label class="f">Отговор получен<input type="date" id="ca-${pid}" data-c="ans" value="${esc(c.ans)}"${ro}></label>
+    </div>
+    <div class="hint">Отговор до: <span class="mono" style="color:var(--ink)">${dueTxt}</span></div>
+    <label class="f">Бележка<input type="text" id="cn-${pid}" data-c="note" value="${esc(c.note)}"${ro}></label>
+    <div class="rem"><span style="font-size:12px;color:var(--muted)">Забележки за поправка</span>`;
+  (c.remarks||[]).forEach((r,i)=>{const v=rs(r);h+=`<div class="rem-row${v==="closed"?" done":""}"><button class="pill ${REM_PILL[v]}" data-rcycle="${i}"${ro}>${REM_TEXT[v]}</button><span>${esc(r.t)}</span>${canWrite?`<button class="ghost x" data-rdel="${i}" aria-label="Махни забележката">×</button>`:""}</div>`});
+  if(canWrite)h+=`<div class="row"><input type="text" id="ra-${pid}" placeholder="нова забележка, напр. разрез А-А, кота" style="max-width:360px"><button data-radd="1">Добави</button></div>`;
+  h+=`<span class="hint">Забележка: за оправяне → оправена от нас → приета от тях.</span></div>`;
+  h+=`<div class="rem"><span style="font-size:12px;color:var(--muted)">Файлове (входящ лист, отговор, писмо)</span>${filesBlock(c.files,ro,"step")}</div>`;
+  if(c.state==="remarks"&&canWrite){const left=(c.remarks||[]).filter(x=>rs(x)==="open").length;
+    h+=`<div class="row"><button class="primary" data-resubmit="1">Пусни отново (кръг ${(c.round||1)+1})</button><span class="hint">${left?left+" забележки още не са оправени":"всички забележки са оправени"}</span></div>`}
+  if(c.history&&c.history.length)h+=`<div class="rem"><span style="font-size:12px;color:var(--muted)">Предишни кръгове</span>${c.history.map((x,i)=>`<div class="hint">Кръг ${i+1}: пусната ${bg(x.date)}${x.reg?", вх. № "+esc(x.reg):""}${x.ans?", отговор "+bg(x.ans):""}${x.remarks&&x.remarks.length?", "+x.remarks.length+" забележки":""}</div>`).join("")}</div>`;
+  h+=`<div class="row end"><span class="hint">${c.round>1?"Сега е кръг "+c.round+".":""}</span><button class="ghost" data-selclose="1">Затвори</button></div></div>`;
+  return h;
+}
+
+/* ---------- events ---------- */
+function targetSpec(el){const ce=el.closest(".cedit");if(!ce)return null;
+  return ce.dataset.doc!==undefined?{doc:+ce.dataset.doc,k:ce.dataset.k}:{key:ce.dataset.key,k:ce.dataset.k}}
+function resolveTarget(p,sp){
+  if(!sp)return null;const k=sp.k;
+  if(sp.doc!==undefined){const d=p.docs[sp.doc];if(!d)return null;d.by=d.by||{};return d.by[k]=d.by[k]||{have:"no",where:"",date:"",note:""}}
+  const s=stepByKey(p,sp.key);return s?ensureCell(s,k):null;
+}
+function fileTarget(p,el){return resolveTarget(p,targetSpec(el))}
+function renamePlotKey(p,from,to){
+  (p.docs||[]).forEach(s=>{if(s.by&&s.by[from]!==undefined){s.by[to]=s.by[from];delete s.by[from]}});
+  if(p.plotInfo&&p.plotInfo[from]!==undefined){p.plotInfo[to]=p.plotInfo[from];delete p.plotInfo[from]}
+  if(p.arch&&p.arch[from]!==undefined){p.arch[to]=p.arch[from];delete p.arch[from]}
+  p.specs.forEach(s=>{if(s.by&&s.by[from]!==undefined){s.by[to]=s.by[from];delete s.by[from]}});
+  p.steps.forEach(s=>{if(s.by&&s.by[from]!==undefined){s.by[to]=s.by[from];delete s.by[from]}});
+  if(p.pvBy&&p.pvBy[from]!==undefined){p.pvBy[to]=p.pvBy[from];delete p.pvBy[from]}
+}
+document.addEventListener("click",e=>{
+  if(e.target.closest("a,input,select,label"))return;
+  const t=e.target.closest("button,[data-toggle],tr[data-goto]");if(!t)return;
+  if(t.dataset.view){view=t.dataset.view;try{localStorage.setItem("pt_view",view)}catch(_){}render();return}
+  if(t.dataset.filter){filter=filter===t.dataset.filter?"all":t.dataset.filter;try{localStorage.setItem("pt_filter2",filter)}catch(_){}render();return}
+  if(t.dataset.padd){if(!canWrite)return;const n=$("#npn").value.trim();if(!n)return;const pid=peopleStore.newId();
+    people[pid]={name:n,spec:$("#nps").value.trim(),phone:$("#npp").value.trim(),email:""};peopleStore.set(pid,people[pid]).catch(()=>showBanner("Инженерът не се записа. Опитай пак."));render();return}
+  if(t.dataset.pdel){if(!canWrite)return;const pid=t.dataset.pdel;if(confirmPerson!==pid){confirmPerson=pid;renderPeople();return}
+    confirmPerson=null;delete people[pid];peopleStore.del(pid).catch(()=>{});render();return}
+  if(t.dataset.goto){const[id,key,k]=t.dataset.goto.split("|");open=id;sel=key?{id,key,k}:null;view="main";try{localStorage.setItem("pt_view",view)}catch(_){}render();const c=document.getElementById("c-"+id);const ce=c&&c.querySelector(".cedit");(ce||c)&&(ce||c).scrollIntoView({behavior:"smooth",block:"center"});return}
+  if(t.dataset.toggle){open=open===t.dataset.toggle?null:t.dataset.toggle;confirmDel=null;confirmPlot=null;sel=null;render();return}
+  if(t.id==="add"){if(!canWrite)return;const id=store.newId();projects[id]=newProject();open=id;sel=null;filter="all";query="";$("#search").value="";flush(id);render();
+    setTimeout(()=>{const i=document.getElementById("cl-"+id);if(i){i.focus();i.scrollIntoView({block:"center"})}},50);return}
+  const ed=t.closest(".ed");if(!ed)return;
+  const id=ed.dataset.id,p=projects[id];if(!p)return;
+  if(t.dataset.sel){const[key,k]=t.dataset.sel.split("|");sel=sel&&sel.key===key&&sel.k===k?null:{id,key,k};render();return}
+  if(t.dataset.selclose){sel=null;render();return}
+  if(t.dataset.dsel){const[i,k]=t.dataset.dsel.split("|");dsel=dsel&&dsel.i===+i&&dsel.k===k?null:{id,i:+i,k};render();return}
+  if(t.dataset.dclose){dsel=null;render();return}
+  if(!canWrite)return;
+  if(t.dataset.fdel!==undefined){
+    if(t.dataset.armed!=="1"){t.dataset.armed="1";t.textContent="махни?";return}
+    const tg=fileTarget(p,t);if(!tg||!tg.files)return;const f=tg.files.splice(+t.dataset.fdel,1)[0];saveSoon(id);render();
+    if(f&&assetsNs)assetsNs.delete(f.id).catch(()=>{});return}
+  if(t.dataset.dwhere){const ce=t.closest(".cedit");const d=p.docs[+ce.dataset.doc],k=ce.dataset.k;d.by=d.by||{};const c=d.by[k]=d.by[k]||{have:"no",where:"",date:"",note:""};
+    c.where=t.dataset.dwhere;if(!c.date)c.date=todayStr();if(c.have==="no")c.have="orig";logIt(p,k,d.name+": "+c.where);saveSoon(id);render();return}
+  if(t.dataset.adddoc){const i=document.getElementById("nd-"+id);const v=i.value.trim();if(v){p.docs.push({name:v,by:{}});saveSoon(id);i.value="";render()}return}
+  if(t.dataset.deldoc!==undefined){p.docs.splice(+t.dataset.deldoc,1);dsel=null;saveSoon(id);render();return}
+  if(t.dataset.cell!==undefined){const s=p.specs[+t.dataset.cell];if(!s)return;s.by=s.by||{};const k=t.dataset.plot;const nv=CELL_NEXT[s.by[k]||"not"];if(nv==="not")delete s.by[k];else s.by[k]=nv;logIt(p,k,s.name+": "+SPEC_TEXT[nv]);saveSoon(id);render()}
+  else if(t.dataset.delspec){p.specs.splice(+t.dataset.delspec,1);saveSoon(id);render()}
+  else if(t.dataset.addspec){const i=document.getElementById("ns-"+id);const v=i.value.trim();if(v){p.specs.push({name:v,by:{}});saveSoon(id);i.value="";render()}}
+  else if(t.dataset.quickstep){const x=EXTRA_STEPS.find(y=>y.key===t.dataset.quickstep);if(x&&!stepByKey(p,x.key)){const si=p.steps.findIndex(s=>s.key==="supervisor");const st=stepFromTemplate(x);
+    p.steps.splice(si<0?p.steps.length:si,0,st);const sup=stepByKey(p,"supervisor");if(sup&&!sup.after.includes(x.key))sup.after.push(x.key);saveSoon(id);render()}}
+  else if(t.dataset.quickspec){p.specs.push({name:t.dataset.quickspec,by:{}});saveSoon(id);render()}
+  else if(t.dataset.addplot){const i=document.getElementById("np-"+id);const v=i.value.trim();if(v&&!p.plots.includes(v)){
+    if(!p.plots.length)renamePlotKey(p,"",v);p.plots.push(v);saveSoon(id);i.value="";render()}}
+  else if(t.dataset.delplot!==undefined){const k=t.dataset.delplot;
+    if(confirmPlot!==id+"|"+k){confirmPlot=id+"|"+k;render();return}
+    confirmPlot=null;p.plots=p.plots.filter(x=>x!==k);p.specs.forEach(s=>{if(s.by)delete s.by[k]});p.steps.forEach(s=>{if(s.by)delete s.by[k]});(p.docs||[]).forEach(s=>{if(s.by)delete s.by[k]});if(p.pvBy)delete p.pvBy[k];
+    if(!p.plots.length)renamePlotKey(p,k,"");saveSoon(id);render()}
+  else if(t.dataset.addstep){const i=document.getElementById("nst-"+id);const v=i.value.trim();if(v){p.steps.push({key:"x"+Date.now().toString(36),name:v,from:"",term:null,pv:false,after:[],by:{}});saveSoon(id);i.value="";render()}}
+  else if(t.dataset.radd||t.dataset.rdel!==undefined||t.dataset.rcycle!==undefined||t.dataset.resubmit){const ce=t.closest(".cedit");const s=stepByKey(p,ce.dataset.key),k=ce.dataset.k,c=ensureCell(s,k);c.remarks=c.remarks||[];
+    if(t.dataset.radd){const i=ce.querySelector("input[id^=ra-]");const v=i.value.trim();if(!v)return;c.remarks.push({t:v,s:"open"});if(c.state==="filed"||c.state==="waiting")c.state="remarks";i.value="";logIt(p,k,s.name+": забележка — "+v)}
+    else if(t.dataset.rcycle!==undefined){const r=c.remarks[+t.dataset.rcycle];r.s=REM_NEXT[rs(r)];delete r.d}
+    else if(t.dataset.resubmit){c.history=c.history||[];c.history.push({date:c.date,reg:c.reg,ans:c.ans||todayStr(),remarks:c.remarks.slice()});
+      c.round=(c.round||1)+1;c.date=todayStr();c.reg="";c.ans="";c.state="filed";c.remarks=c.remarks.filter(r=>rs(r)==="open");logIt(p,k,s.name+": подадено отново, кръг "+c.round)}    else c.remarks.splice(+t.dataset.rdel,1);
+    saveSoon(id);render()}
+  else if(t.dataset.logadd){const i=document.getElementById("lg-"+id);const v=i.value.trim();if(v){p.log=p.log||[];p.log.push({d:todayStr(),t:v});saveSoon(id);i.value="";render()}}
+  else if(t.dataset.del){confirmDel=id;render()}
+  else if(t.dataset.delno){confirmDel=null;render()}
+  else if(t.dataset.delyes){delete projects[id];dirty.delete(id);clearTimeout(timers[id]);confirmDel=null;open=null;sel=null;store.del(id).catch(()=>showBanner("Изтриването не мина. Опитай пак."));render()}
+});
+document.addEventListener("keydown",e=>{const t=e.target;if((e.key==="Enter"||e.key===" ")&&t.dataset&&t.dataset.toggle){e.preventDefault();t.click()}
+  if(e.key==="Enter"&&t.id&&/^(ns|nst|np|ra|lg)-/.test(t.id)){e.preventDefault();const b=t.parentElement.querySelector("button");if(b)b.click()}});
+function onField(e){
+  const t=e.target;const ed=t.closest&&t.closest(".ed");if(!ed||!canWrite)return;
+  const id=ed.dataset.id,p=projects[id];if(!p)return;
+  if(t.dataset.f){p[t.dataset.f]=t.type==="checkbox"?t.checked:t.value;saveSoon(id);if(t.type==="checkbox")render();else renderSummary();return}
+  if(t.dataset.fup){const sp=targetSpec(t);if(sp&&t.files&&t.files.length)uploadFiles([...t.files],sp,id);t.value="";return}
+  if(t.dataset.dc){const ce=t.closest(".cedit");const d=p.docs[+ce.dataset.doc],k=ce.dataset.k;if(!d)return;d.by=d.by||{};const c=d.by[k]=d.by[k]||{have:"no",where:"",date:"",note:""};
+    c[t.dataset.dc]=t.value;if(t.dataset.dc==="have")logIt(p,k,d.name+": "+HAVE_TEXT[t.value]);saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
+  if(t.dataset.si!==undefined){const s=p.specs[+t.dataset.si];if(!s)return;
+    if(t.dataset.sk==="eng"&&t.value==="__new"){view="people";try{localStorage.setItem("pt_view",view)}catch(_){}render();const i=document.getElementById("nps");if(i)i.value=s.name;const n=document.getElementById("npn");if(n)n.focus();return}
+    s[t.dataset.sk]=t.value;
+    if(t.dataset.sk==="sent"&&t.value){plotKeys(p).forEach(k=>{s.by=s.by||{};if(!s.by[k])s.by[k]="sent"});logIt(p,"",s.name+": подадена към инженера")}
+    if(t.dataset.sk==="due"&&t.value)logIt(p,"",s.name+": срок от инженера "+bgShort(t.value));
+    if(t.dataset.sk==="eng"&&t.value)logIt(p,"",s.name+": инженер "+personName(t.value));
+    saveSoon(id);if(t.type==="date"||t.tagName==="SELECT")render();else renderSummary();return}
+  if(t.dataset.ak){const ac=t.closest("[data-arch]");const k=ac.dataset.arch;p.arch=p.arch||{};const a=p.arch[k]=p.arch[k]||{stage:"not",wait:"",what:"",since:"",note:""};
+    a[t.dataset.ak]=t.value;if(t.dataset.ak==="wait"&&t.value&&!a.since)a.since=todayStr();if(t.dataset.ak==="wait"&&!t.value)a.since="";
+    if(t.dataset.ak==="stage")logIt(p,k,"Архитектура: "+ARCH_TEXT[t.value]);
+    if(t.dataset.ak==="wait")logIt(p,k,"Архитектура: чакаме "+((ARCH_WAIT.find(x=>x[0]===t.value)||["",""])[1]));
+    saveSoon(id);if(t.type==="text")renderSummary();else render();return}
+  if(t.dataset.pi){const k=t.closest("[data-plotk]").dataset.plotk;p.plotInfo=p.plotInfo||{};const pi=p.plotInfo[k]=p.plotInfo[k]||{};pi[t.dataset.pi]=t.value;saveSoon(id);renderSummary();return}
+  if(t.dataset.pv!==undefined){p.pvBy=p.pvBy||{};if(t.checked)p.pvBy[t.dataset.pv]=true;else delete p.pvBy[t.dataset.pv];saveSoon(id);render();return}
+  const ce=t.closest(".cedit");if(!ce)return;
+  const s=stepByKey(p,ce.dataset.key),k=ce.dataset.k;if(!s)return;
+  if(t.dataset.term){
+    if(t.dataset.term==="n"){const n=parseInt(t.value,10);s.term=n>0?{n,u:(s.term&&s.term.u)||"w"}:null}
+    else s.term={n:(s.term&&s.term.n)||1,u:t.value};
+    saveSoon(id);if(t.type!=="number")render();else renderSummary();return}
+  if(t.dataset.rdone!==undefined){const c=ensureCell(s,k);c.remarks[+t.dataset.rdone].d=t.checked;saveSoon(id);render();return}
+  if(t.dataset.c){const c=ensureCell(s,k),f=t.dataset.c;c[f]=t.value;
+    if(f==="date"&&t.value&&c.state==="not")c.state="filed";
+    if(f==="ans"&&t.value&&c.state!=="remarks")c.state="done";
+    if(f==="state"&&t.value==="done"&&!c.ans)c.ans=todayStr();
+    if(f==="state"||f==="date"||f==="ans")logIt(p,k,s.name+": "+((STATES.find(x=>x[0]===c.state)||["",""])[1]).toLowerCase()+(f==="ans"&&t.value?" (отговор "+bgShort(t.value)+")":""));
+    saveSoon(id);
+    if(f==="note"||f==="reg")renderSummary();else render();
+  }
+}
+document.addEventListener("input",e=>{if(e.target.matches("input[type=text],textarea,input[type=number]"))onField(e)});
+document.addEventListener("change",e=>{if(!e.target.matches("input[type=text],textarea,input[type=number]"))onField(e)});
+const ptimers={};
+document.addEventListener("input",e=>{const t=e.target;if(!t.dataset||!t.dataset.pk||!canWrite)return;const tr=t.closest("tr[data-pid]");const pid=tr&&tr.dataset.pid;if(!pid||!people[pid])return;
+  people[pid][t.dataset.pk]=t.value;clearTimeout(ptimers[pid]);ptimers[pid]=setTimeout(()=>peopleStore.set(pid,{...people[pid]}).catch(()=>showBanner("Промяната по инженера не се записа.")),600)});
+document.addEventListener("focusout",e=>{if(e.target.dataset&&e.target.dataset.pk)setTimeout(()=>{if(!(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.pk))renderSoon()},0)});
+$("#search").addEventListener("input",e=>{query=e.target.value.trim();render()});
+$("#showClosed").addEventListener("change",render);
+setInterval(()=>{if($("#today").textContent!=="Днес е "+bg(todayStr()))render()},60000);
+boot();
+</script>

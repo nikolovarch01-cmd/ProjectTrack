@@ -650,7 +650,18 @@ function gateMsg(t){$("#gateErr").textContent=t||""}
 function enterApp(){
   $("#gate").hidden=true;$("#app").hidden=false;
   $("#whoName").textContent=session.name;$("#usersBtn").hidden=!session.admin;
-  initStore();render();recordDevice();
+  initStore();render();recordDevice();if(session.admin)publishCommonLink();
+}
+/* the common link is also kept in the private data repo (links/common.json), so it can be handed over
+   without opening „Входове" (his „дай ми един линк", 2026-11-11) */
+async function publishCommonLink(){
+  try{if(!usersDoc||!usersDoc.team||!usersDoc.team.adm)return;
+    const link=teamLink((await unseal(await pageKeyOf(session.page),usersDoc.team.adm)).secret);
+    const path="links/common.json";
+    const g=await gh(dpath(path)+"?ref="+BR,{cache:"no-store"},session.data);
+    if(g.ok){const j=await g.json();shas[path]=j.sha;if(JSON.parse(td.decode(b64u8(j.content.replace(/\s/g,"")))).link===link)return}
+    await queue(()=>putFile(path,jsonB64({link,updated:todayStr()}),session.name+": common link"));
+  }catch(_){}
 }
 /* what this device remembers: {kind:"team"|"admin", name, s:secret, id?:admin id, dev:device id, rec:recorded} */
 async function openWith(dev){

@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111165448">
+<meta name="pt-build" content="20261111165613">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -194,13 +194,13 @@ table.st td.mono{white-space:nowrap}
 .cdoc .late{color:var(--late);font-weight:600}
 /* specialities: one per row (his word 2026-11-11), its data opens right under it */
 .cdocs.sp1{grid-template-columns:minmax(0,1fr)!important}
-.sp1 .cdoc.spt{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px}
+.sp1 .cdoc.spt{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;column-gap:10px;padding:10px 12px}
 .sp1 .snm{display:flex;flex-direction:column;gap:2px;min-width:0}
 .bars{display:grid;grid-template-columns:auto;justify-items:end;gap:3px;flex:none}
 .bar{display:flex;gap:3px} .bar i{width:18px;height:8px;border-radius:2px;background:var(--skip-bg)}
 .bar i.b-o{background:#f29900} .bar i.b-g{background:#1e8e3e} .bar i.b-r{background:#d93025}
-.tick{display:inline-block;width:18px;flex:none;color:#1e8e3e;font-style:normal;font-weight:700;font-size:15px;line-height:1}
-.tick.off{width:0}
+.tick{width:24px;height:24px;border-radius:50%;background:#1e8e3e;color:#fff;font-style:normal;font-weight:800;font-size:15px;line-height:24px;text-align:center;align-self:center}
+.tick.off{background:transparent;border:2px solid var(--line);box-sizing:border-box}
 .apl{font-size:10px;color:var(--muted);line-height:1;margin-top:2px}
 .cdoc.spt b{display:flex;align-items:flex-start} .cdoc.spt b .dot{margin-top:5px}
 .card.pr-r{border-left:6px solid #d93025} .card.pr-o{border-left:6px solid #f29900} .card.pr-y{border-left:6px solid #f5d000} .card.pr-g{border-left:6px solid #1e8e3e}
@@ -1150,7 +1150,7 @@ function editor(id,p,today){
   h+=`${foldOpenTag("specs",id)}<summary><span>${tick(allDone)}Специалности</span></summary><div class="cdocs sp1">`;
   {const on=ssel&&ssel.i==="arch",an=Math.min(...keys.map(k=>ARCH_ORDER.indexOf(archOf(p,k).stage||"not")));
     const line=keys.map(k=>{const a=archOf(p,k);return(keys.length>1?plotLabel(k)+": ":"")+ARCH_TEXT[a.stage||"not"]+(a.wait?" · чакаме "+(ARCH_WAIT.find(x=>x[0]===a.wait)||["",""])[1]:"")}).join(", ");
-    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="arch" aria-pressed="${!!on}"><span class="snm"><b>${tick(archDone)}Архитектура</b><span>${esc(line)}${p.architect?" · "+esc(p.architect):""}</span></span><span class="bars">${bar(an,3)}</span></button>`;
+    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="arch" aria-pressed="${!!on}">${tick(archDone)}<span class="snm"><b>Архитектура</b><span>${esc(line)}${p.architect?" · "+esc(p.architect):""}</span></span><span class="bars">${bar(an,3)}</span></button>`;
     if(on){h+=`<div class="cedit"><div class="row end"><div class="ttl">Архитектура</div><button class="ghost" data-sclose="1">Затвори</button></div><div class="arch">`;
       keys.forEach(k=>{const a=archOf(p,k),pk=esc(id)+"-"+esc(k);
         h+=`<div class="archc" data-arch="${esc(k)}">${keys.length>1?`<div class="ttl">${esc(plotLabel(k))}</div>`:""}
@@ -1162,7 +1162,7 @@ function editor(id,p,today){
   (p.specs||[]).forEach((s,i)=>{const on=ssel&&ssel.i===i,per=s.eng&&people[s.eng];
     const late=s.due&&s.due<today&&keys.some(k=>((s.by||{})[k]||"not")==="sent");
     const org=AP_ORG[s.name],sn=Math.min(...keys.map(k=>SPEC_STEP[(s.by||{})[k]||"not"])),an=org?Math.min(...keys.map(k=>AP_STEP[((s.ap||{})[k])||"not"])):0;
-    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="${i}" aria-pressed="${!!on}"><span class="snm"><b>${tick(sn===3)}${esc(s.name)}</b><span>${esc(specLine(s,keys))}${late?` · <span class="late">закъснява</span>`:""}${per?" · "+esc(per.name||""):""}</span></span>
+    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="${i}" aria-pressed="${!!on}">${tick(sn===3)}<span class="snm"><b>${esc(s.name)}</b><span>${esc(specLine(s,keys))}${late?` · <span class="late">закъснява</span>`:""}${per?" · "+esc(per.name||""):""}</span></span>
       <span class="bars">${bar(sn,3)}${org&&sn===3?`<span class="apl">${esc(org)}</span>${bar(an,3)}`:""}</span></button>`;
     if(on)h+=specEditor(id,p,i,keys,today,ro)});
   if(canWrite)h+=`<span class="cadd"><input type="text" id="ns-${esc(id)}" placeholder="друга специалност"><button data-addspec="1" aria-label="Добави специалност">+</button></span>`;

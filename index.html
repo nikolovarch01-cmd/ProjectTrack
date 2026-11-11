@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111170255">
+<meta name="pt-build" content="20261111170809">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -973,7 +973,7 @@ function matches(p){if(!query)return true;const q=query.toLowerCase();return[p.c
 /* ---------- render ---------- */
 let rq=false,pendingRender=false;
 function renderSoon(){if(rq)return;rq=true;requestAnimationFrame(()=>{rq=false;render()})}
-function typing(){const ae=document.activeElement;return ae&&ae.closest&&ae.closest(".ed")&&ae.matches("input[type=text],input:not([type]),textarea,input[type=number]")}
+function typing(){const ae=document.activeElement;return ae&&ae.closest&&ae.closest(".ed")&&ae.matches("input[type=text],input:not([type]),textarea,input[type=number],input[type=date]")}
 function render(){
   if(typing()){pendingRender=true;renderSummary();return}
   pendingRender=false;renderSummary();renderList();renderViews();
@@ -1424,7 +1424,16 @@ function onField(e){
   }
 }
 document.addEventListener("input",e=>{if(e.target.matches("input[type=text],textarea,input[type=number]"))onField(e)});
-document.addEventListener("change",e=>{if(!e.target.matches("input[type=text],textarea,input[type=number]"))onField(e)});
+/* iPhone: tapping an empty date field fills today at once and our re-render shut the picker (his „гадория",
+   2026-11-11). There a date is kept only when the field is left, and an untouched auto „today" is dropped. */
+const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+document.addEventListener("focusin",e=>{const t=e.target;if(IOS&&t.type==="date"){t.dataset.orig=t.value;t.dataset.nch="0"}});
+document.addEventListener("focusout",e=>{const t=e.target;if(!(IOS&&t.type==="date"&&t.dataset.orig!==undefined))return;
+  const n=+t.dataset.nch||0,o=t.dataset.orig;delete t.dataset.orig;
+  if(o===""&&n<=1&&t.value===todayStr())t.value="";
+  if(t.value!==o)onField({target:t});else if(pendingRender)setTimeout(render,0)});
+document.addEventListener("change",e=>{const t=e.target;if(IOS&&t.type==="date"&&document.activeElement===t){t.dataset.nch=(+t.dataset.nch||0)+1;return}
+  if(!t.matches("input[type=text],textarea,input[type=number]"))onField(e)});
 const ptimers={};
 document.addEventListener("input",e=>{const t=e.target;if(!t.dataset||!t.dataset.pk||!canWrite)return;const tr=t.closest("tr[data-pid]");const pid=tr&&tr.dataset.pid;if(!pid||!people[pid])return;
   people[pid][t.dataset.pk]=t.value;clearTimeout(ptimers[pid]);ptimers[pid]=setTimeout(()=>peopleStore.set(pid,{...people[pid]}).catch(()=>showBanner("Промяната по инженера не се записа.")),600)});

@@ -169,13 +169,13 @@ table.st td.mono{white-space:nowrap}
 .sc span{display:block}
 /* the project's own papers: one row of tiles on top of the opened project */
 .cpanel{display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--line)}
-.cdocs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.cdoc{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:13px;line-height:1.2}
-.cdoc i{width:8px;height:8px;border-radius:50%;flex:none}
-.cdoc.h-no i{background:var(--late)} .cdoc.h-asked i{background:var(--soon)} .cdoc.h-orig i{background:var(--ok)} .cdoc.h-copy i{background:var(--accent)}
-.clegend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted)} .clegend .cdoc{font-size:11px;color:var(--muted)}
-.cdoc.sel{border-color:var(--ink)} .cdoc .nf{color:var(--muted);font-size:12px}
-.cadd{display:inline-flex;gap:4px;align-items:center;max-width:220px} .cadd input{min-width:0}
+.cdocs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.cdoc{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;padding:5px 9px;border-radius:8px;border:1px solid transparent;font-size:11px;line-height:1.25}
+.cdoc b{font-size:13px;font-weight:600}
+.cdoc.h-no{background:var(--late-bg);color:var(--late)} .cdoc.h-asked{background:var(--soon-bg);color:var(--soon)}
+.cdoc.h-orig{background:var(--ok-bg);color:var(--ok)} .cdoc.h-copy{background:var(--accent-bg);color:var(--accent)}
+.cdoc.sel{border-color:var(--ink)} .cdoc .nf{opacity:.75}
+.cadd{display:flex;gap:4px;align-items:center} .cadd input{min-width:0}
 .files{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
 .file{display:flex;flex-direction:column;gap:2px;width:108px;font-size:12px;position:relative}
 .file img,.fpdf{width:108px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--sunk)}
@@ -1115,9 +1115,9 @@ function commonPanel(id,p,ro){
   if(!csel||csel.id!==id||!p.common[csel.i])csel=null;
   let h=`<div class="cpanel"><h2>Документи по проекта</h2><div class="cdocs">`;
   p.common.forEach((c,i)=>{const on=csel&&csel.i===i,nf=(c.files||[]).length;
-    h+=`<button class="cdoc h-${c.have||"no"}${on?" sel":""}" data-csel="${i}" aria-pressed="${on}" title="${esc((HAVE_TEXT[c.have]||HAVE_TEXT.no)+(c.where?" · "+c.where:""))}"><i></i>${esc(c.name)}${nf?`<span class="nf">${nf}</span>`:""}</button>`});
+    h+=`<button class="cdoc h-${c.have||"no"}${on?" sel":""}" data-csel="${i}" aria-pressed="${on}"><b>${esc(c.name)}</b><span>${HAVE_TEXT[c.have]||HAVE_TEXT.no}${c.where?" · "+esc(c.where):""}${nf?` <span class="nf">· ${nf} ${nf===1?"файл":"файла"}</span>`:""}</span></button>`});
   if(canWrite)h+=`<span class="cadd"><input type="text" id="nc-${esc(id)}" placeholder="друг документ"><button data-addcommon="1" aria-label="Добави документ">+</button></span>`;
-  h+=`</div><div class="clegend">${HAVE.map(([v,t])=>`<span class="cdoc h-${v}" style="border:0;padding:0;background:none"><i></i>${t}</span>`).join("")}</div>`;
+  h+=`</div></div>`;
   if(csel){const c=p.common[csel.i],pid=esc(id)+"-c"+csel.i;
     h+=`<div class="cedit" data-common="${csel.i}">
       <div class="row end"><div class="ttl">${esc(c.name)}</div><span>${canWrite?`<button class="ghost danger" data-delcommon="${csel.i}">Махни</button>`:""}<button class="ghost" data-cclose="1">Затвори</button></span></div>

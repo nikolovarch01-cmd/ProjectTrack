@@ -1322,7 +1322,9 @@ let installEv=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEv=e;$("#installBtn").hidden=false});
 window.addEventListener("appinstalled",()=>{$("#installBtn").hidden=true});
 $("#installBtn").addEventListener("click",async()=>{if(!installEv)return;installEv.prompt();try{await installEv.userChoice}catch(_){}installEv=null;$("#installBtn").hidden=true});
-if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});
+  /* a newer page arrived behind the quick copy: take it at once, but only right after opening and with nothing unsaved */
+  navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="pt-updated"&&performance.now()<15000&&!typing()&&!uploading&&!dirty.size)location.reload()})}
 /* iPhone ignores "no zoom" in the viewport line - stop the pinch and double-tap zoom by hand */
 if(window.matchMedia&&matchMedia("(pointer:coarse)").matches){
   ["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));

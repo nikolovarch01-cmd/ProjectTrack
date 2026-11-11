@@ -1118,7 +1118,7 @@ function commonPanel(id,p,ro){
   p.common.forEach((c,i)=>{const on=csel&&csel.i===i,nf=(c.files||[]).length;
     h+=`<button class="cdoc h-${c.have||"no"}${on?" sel":""}" data-csel="${i}" aria-pressed="${on}"><b>${esc(c.name)}</b><span>${HAVE_TEXT[c.have]||HAVE_TEXT.no}${c.where?" · "+esc(c.where):""}${nf?` <span class="nf">· ${nf} ${nf===1?"файл":"файла"}</span>`:""}</span></button>`});
   if(canWrite)h+=`<span class="cadd"><input type="text" id="nc-${esc(id)}" placeholder="друг документ"><button data-addcommon="1" aria-label="Добави документ">+</button></span>`;
-  h+=`</div></div>`;
+  h+=`</div>`;
   if(csel){const c=p.common[csel.i],pid=esc(id)+"-c"+csel.i;
     h+=`<div class="cedit" data-common="${csel.i}">
       <div class="row end"><div class="ttl">${esc(c.name)}</div><span>${canWrite?`<button class="ghost danger" data-delcommon="${csel.i}">Махни</button>`:""}<button class="ghost" data-cclose="1">Затвори</button></span></div>

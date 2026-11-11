@@ -703,8 +703,8 @@ async function boot(){
   const mt=h.match(/^#t=([\w-]+)$/), ma=h.match(/^#a=(a[\w-]+)\.([\w-]+)$/);
   /* the link stays in the address, so "Add to Home screen" keeps it (an iPhone home-screen app has its own memory) */
   if(mt||ma){const old=devGet();
-    dev=mt?{kind:"team",s:mt[1],name:old&&old.kind==="team"?old.name:"",dev:old&&old.dev||"d"+rnd(9),rec:old&&old.rec}
-          :{kind:"admin",id:ma[1],s:ma[2],name:"",dev:old&&old.dev||"d"+rnd(9),rec:old&&old.rec}}
+    dev=mt?{kind:"team",s:mt[1],name:old&&old.kind==="team"?old.name:"",dev:old&&old.dev||"d"+rnd(9),rec:false}
+          :{kind:"admin",id:ma[1],s:ma[2],name:"",dev:old&&old.dev||"d"+rnd(9),rec:false}}
   else dev=devGet();
   try{await loadUsers()}catch(e){gateMsg("Няма връзка с GitHub. Опитай пак след малко.");return}
   if(!usersDoc||!usersDoc.vault){$("#setupForm").hidden=false;return}

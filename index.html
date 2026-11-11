@@ -167,6 +167,15 @@ table.st td.mono{white-space:nowrap}
 .sc.h-no{background:var(--late-bg);color:var(--late)} .sc.h-asked{background:var(--soon-bg);color:var(--soon)}
 .sc.h-orig{background:var(--ok-bg);color:var(--ok)} .sc.h-copy{background:var(--accent-bg);color:var(--accent)}
 .sc span{display:block}
+/* the project's own papers: one row of tiles on top of the opened project */
+.cpanel{display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.cdocs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.cdoc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid transparent;font-size:12px;line-height:1.3}
+.cdoc b{font-size:14px;font-weight:600}
+.cdoc.h-no{background:var(--late-bg);color:var(--late)} .cdoc.h-asked{background:var(--soon-bg);color:var(--soon)}
+.cdoc.h-orig{background:var(--ok-bg);color:var(--ok)} .cdoc.h-copy{background:var(--accent-bg);color:var(--accent)}
+.cdoc.sel{border-color:var(--ink)} .cdoc .nf{color:var(--muted)}
+.cadd{display:flex;gap:4px;align-items:center} .cadd input{min-width:0}
 .files{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
 .file{display:flex;flex-direction:column;gap:2px;width:108px;font-size:12px;position:relative}
 .file img,.fpdf{width:108px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--sunk)}
@@ -317,7 +326,11 @@ const EXTRA_STEPS=[{key:"tech_control",name:"Технически контрол
 const MODEL=3;
 const OLD_NAMES={rosv:"РОСВ — скица и ситуация (копия, през надзора)",permit:"Разрешение за строеж"};
 /* documents per plot: do we have it, and where is it now (his ask, 2026-11-10) */
-const DOCS=["Нотариален акт","Скица (на името на собственика)","Виза за проектиране","ВиК — изходни данни","ВиК — съгласувана виза","Енерго Про — становище","Енерго Про — съгласувана виза","Геоложки доклад","Геодезическо заснемане","Ситуация","Пълномощно от собственика","Проект (всички части)","Доклад за ЕЕ (оценка на съответствието)","Доклад за съответствие","Разрешение за строеж"];
+/* the project's own papers, on top of the opened project (his ask 2026-11-11: „нотариален акт, пуп, скица/виза,
+   пълномощно ... някви други ей такив работи") - one per project, not per plot */
+const COMMON=["Нотариален акт","Скица от кадастъра","Виза за проектиране","ПУП","Пълномощно"];
+const MOVED_TO_COMMON={"Нотариален акт":"Нотариален акт","Скица (на името на собственика)":"Скица от кадастъра","Виза за проектиране":"Виза за проектиране","Пълномощно от собственика":"Пълномощно"};
+const DOCS=["ВиК — изходни данни","ВиК — съгласувана виза","Енерго Про — становище","Енерго Про — съгласувана виза","Геоложки доклад","Геодезическо заснемане","Ситуация","Проект (всички части)","Доклад за ЕЕ (оценка на съответствието)","Доклад за съответствие","Разрешение за строеж"];
 const HAVE=[["no","нямаме"],["asked","поискан"],["orig","оригинал"],["copy","копие"]];
 const HAVE_TEXT={no:"нямаме",asked:"поискан",orig:"оригинал",copy:"копие"};
 const WHERE=["при нас","при клиента","в надзора","в общината","ВиК","Енерго Про","РИОСВ","Кадастър","у проектанта"];
@@ -363,6 +376,9 @@ function normalize(p){
     if(t&&t.specs)s.specs=true;
     return s});
   if(!Array.isArray(p.docs))p.docs=DOCS.map(n=>({name:n,by:{}}));
+  if(!Array.isArray(p.common)){p.common=COMMON.map(n=>({name:n,have:"no",where:"",date:"",note:""}));
+    p.docs=p.docs.filter(d=>{const to=MOVED_TO_COMMON[d.name];if(!to)return true;
+      const c=p.common.find(x=>x.name===to),first=d.by&&Object.values(d.by).find(Boolean);if(c&&first)Object.assign(c,first);return false})}
   if((p.v||1)<MODEL){
     p.steps.forEach(s=>{const t=TEMPLATE.find(x=>x.key===s.key);if(!t)return;
       if(OLD_NAMES[s.key]&&s.name===OLD_NAMES[s.key]){s.name=t.name;if(!s.term&&t.term)s.term={...t.term};if(t.from)s.from=t.from}});
@@ -839,7 +855,7 @@ function flush(id){
 }
 
 /* ---------- view state ---------- */
-let filter="all", open=null, sel=null, dsel=null, confirmDel=null, confirmPlot=null, query="";
+let filter="all", open=null, sel=null, dsel=null, csel=null, confirmDel=null, confirmPlot=null, query="";
 try{const f=localStorage.getItem("pt_filter2");if(f)filter=f}catch(e){}
 
 function newProject(){
@@ -1020,7 +1036,7 @@ function cellButton(p,s,k,today,isSel){
 function editor(id,p,today){
   const ro=canWrite?"":" disabled", keys=plotKeys(p);
   if(!sel||sel.id!==id||!stepByKey(p,sel.key)||!keys.includes(sel.k))sel=null;
-  let h=`<div class="ed" data-id="${esc(id)}">
+  let h=`<div class="ed" data-id="${esc(id)}">${commonPanel(id,p,ro)}
   <div class="grid4">
     <label class="f">Клиент<input type="text" id="cl-${esc(id)}" data-f="client" value="${esc(p.client)}"${ro}></label>
     <label class="f">Телефон на клиента<input type="tel" id="ct-${esc(id)}" data-f="phone" value="${esc(p.phone)}"${ro}></label>
@@ -1094,6 +1110,28 @@ function editor(id,p,today){
   }
   return h+"</div>";
 }
+function commonPanel(id,p,ro){
+  if(!Array.isArray(p.common))normalize(p);
+  if(!csel||csel.id!==id||!p.common[csel.i])csel=null;
+  let h=`<div class="cpanel"><h2>Документи по проекта</h2><div class="cdocs">`;
+  p.common.forEach((c,i)=>{const on=csel&&csel.i===i,nf=(c.files||[]).length;
+    h+=`<button class="cdoc h-${c.have||"no"}${on?" sel":""}" data-csel="${i}" aria-pressed="${on}"><b>${esc(c.name)}</b><span>${HAVE_TEXT[c.have]||"нямаме"}${c.where?" · "+esc(c.where):""}</span>${nf?`<span class="nf">${nf} ${nf===1?"файл":"файла"}</span>`:""}</button>`});
+  if(canWrite)h+=`<span class="cadd"><input type="text" id="nc-${esc(id)}" placeholder="друг документ"><button data-addcommon="1" aria-label="Добави документ">+</button></span>`;
+  h+=`</div>`;
+  if(csel){const c=p.common[csel.i],pid=esc(id)+"-c"+csel.i;
+    h+=`<div class="cedit" data-common="${csel.i}">
+      <div class="row end"><div class="ttl">${esc(c.name)}</div><span>${canWrite?`<button class="ghost danger" data-delcommon="${csel.i}">Махни</button>`:""}<button class="ghost" data-cclose="1">Затвори</button></span></div>
+      ${filesBlock(c.files,ro,"common")}
+      <div class="cgrid">
+        <label class="f">Имаме ли го<select id="ch-${pid}" data-cc="have"${ro}>${opt(HAVE,c.have||"no")}</select></label>
+        <label class="f">Къде е сега<input type="text" id="cw-${pid}" data-cc="where" list="wheres" value="${esc(c.where)}" placeholder="при нас"${ro}></label>
+        <label class="f">От дата<input type="date" id="cd-${pid}" data-cc="date" value="${esc(c.date)}"${ro}></label>
+        <label class="f" style="grid-column:span 2">Бележка<input type="text" id="cn-${pid}" data-cc="note" value="${esc(c.note)}"${ro}></label>
+      </div>
+      <div class="row">${WHERE.map(w=>`<button class="pill ${c.where===w?"p-wait":"p-not"}" data-cwhere="${esc(w)}"${ro}>${esc(w)}</button>`).join("")}</div>
+    </div>`}
+  return h+`</div>`;
+}
 function docCell(d,k){return(d.by&&d.by[k])||{have:"no",where:"",date:"",note:""}}
 function docsSection(id,p,keys,ro){
   if(!dsel||dsel.id!==id||!p.docs[dsel.i]||!keys.includes(dsel.k))dsel=null;
@@ -1153,9 +1191,11 @@ function cellEditor(id,p,s,k,today,ro){
 
 /* ---------- events ---------- */
 function targetSpec(el){const ce=el.closest(".cedit");if(!ce)return null;
+  if(ce.dataset.common!==undefined)return{common:+ce.dataset.common};
   return ce.dataset.doc!==undefined?{doc:+ce.dataset.doc,k:ce.dataset.k}:{key:ce.dataset.key,k:ce.dataset.k}}
 function resolveTarget(p,sp){
   if(!sp)return null;const k=sp.k;
+  if(sp.common!==undefined)return(p.common||[])[sp.common]||null;
   if(sp.doc!==undefined){const d=p.docs[sp.doc];if(!d)return null;d.by=d.by||{};return d.by[k]=d.by[k]||{have:"no",where:"",date:"",note:""}}
   const s=stepByKey(p,sp.key);return s?ensureCell(s,k):null;
 }
@@ -1185,6 +1225,8 @@ document.addEventListener("click",e=>{
   const id=ed.dataset.id,p=projects[id];if(!p)return;
   if(t.dataset.sel){const[key,k]=t.dataset.sel.split("|");sel=sel&&sel.key===key&&sel.k===k?null:{id,key,k};render();return}
   if(t.dataset.selclose){sel=null;render();return}
+  if(t.dataset.csel){const i=+t.dataset.csel;csel=csel&&csel.id===id&&csel.i===i?null:{id,i};render();return}
+  if(t.dataset.cclose){csel=null;render();return}
   if(t.dataset.dsel){const[i,k]=t.dataset.dsel.split("|");dsel=dsel&&dsel.i===+i&&dsel.k===k?null:{id,i:+i,k};render();return}
   if(t.dataset.dclose){dsel=null;render();return}
   if(!canWrite)return;
@@ -1194,6 +1236,11 @@ document.addEventListener("click",e=>{
     if(f&&assetsNs)assetsNs.delete(f.id).catch(()=>{});return}
   if(t.dataset.dwhere){const ce=t.closest(".cedit");const d=p.docs[+ce.dataset.doc],k=ce.dataset.k;d.by=d.by||{};const c=d.by[k]=d.by[k]||{have:"no",where:"",date:"",note:""};
     c.where=t.dataset.dwhere;if(!c.date)c.date=todayStr();if(c.have==="no")c.have="orig";logIt(p,k,d.name+": "+c.where);saveSoon(id);render();return}
+  if(t.dataset.addcommon){const i=document.getElementById("nc-"+id);const v=i.value.trim();if(v){p.common=p.common||[];p.common.push({name:v,have:"no",where:"",date:"",note:""});csel={id,i:p.common.length-1};saveSoon(id);i.value="";render()}return}
+  if(t.dataset.delcommon!==undefined){if(t.dataset.armed!=="1"){t.dataset.armed="1";t.textContent="махни?";return}
+    p.common.splice(+t.dataset.delcommon,1);csel=null;saveSoon(id);render();return}
+  if(t.dataset.cwhere){const c=p.common[+t.closest(".cedit").dataset.common];if(!c)return;c.where=t.dataset.cwhere;if(!c.date)c.date=todayStr();if((c.have||"no")==="no")c.have="orig";
+    logIt(p,"",c.name+": "+c.where);saveSoon(id);render();return}
   if(t.dataset.adddoc){const i=document.getElementById("nd-"+id);const v=i.value.trim();if(v){p.docs.push({name:v,by:{}});saveSoon(id);i.value="";render()}return}
   if(t.dataset.deldoc!==undefined){p.docs.splice(+t.dataset.deldoc,1);dsel=null;saveSoon(id);render();return}
   if(t.dataset.cell!==undefined){const s=p.specs[+t.dataset.cell];if(!s)return;s.by=s.by||{};const k=t.dataset.plot;const nv=CELL_NEXT[s.by[k]||"not"];if(nv==="not")delete s.by[k];else s.by[k]=nv;logIt(p,k,s.name+": "+SPEC_TEXT[nv]);saveSoon(id);render()}
@@ -1227,6 +1274,8 @@ function onField(e){
   const id=ed.dataset.id,p=projects[id];if(!p)return;
   if(t.dataset.f){p[t.dataset.f]=t.type==="checkbox"?t.checked:t.value;saveSoon(id);if(t.type==="checkbox")render();else renderSummary();return}
   if(t.dataset.fup){const sp=targetSpec(t);if(sp&&t.files&&t.files.length)uploadFiles([...t.files],sp,id);t.value="";return}
+  if(t.dataset.cc){const c=p.common[+t.closest(".cedit").dataset.common];if(!c)return;c[t.dataset.cc]=t.value;
+    if(t.dataset.cc==="have")logIt(p,"",c.name+": "+HAVE_TEXT[t.value]);saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
   if(t.dataset.dc){const ce=t.closest(".cedit");const d=p.docs[+ce.dataset.doc],k=ce.dataset.k;if(!d)return;d.by=d.by||{};const c=d.by[k]=d.by[k]||{have:"no",where:"",date:"",note:""};
     c[t.dataset.dc]=t.value;if(t.dataset.dc==="have")logIt(p,k,d.name+": "+HAVE_TEXT[t.value]);saveSoon(id);if(t.tagName==="SELECT"||t.type==="date")render();else renderSummary();return}
   if(t.dataset.si!==undefined){const s=p.specs[+t.dataset.si];if(!s)return;

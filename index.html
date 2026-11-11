@@ -684,7 +684,8 @@ async function boot(){
   try{await loadUsers()}catch(e){gateMsg("Няма връзка с GitHub. Опитай пак след малко.");return}
   if(!usersDoc||!usersDoc.vault){$("#setupForm").hidden=false;return}
   if(!dev){$("#needLink").hidden=false;return}
-  if(dev.kind==="team"&&!dev.name){pendingDev=dev;$("#nameForm").hidden=false;$("#nmName").focus();return}
+  /* no name question on open (his word 2026-11-11) - the device is told apart by its own id */
+  if(dev.kind==="team"&&!dev.name)dev.name="Колега "+dev.dev.slice(1,5);
   try{await openWith(dev)}catch(e){devDel();$("#needLink").hidden=false;gateMsg("Този линк вече не важи. Поискай нов.");return}
   devSet(dev);enterApp();
 }

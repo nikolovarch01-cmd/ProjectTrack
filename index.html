@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111170809">
+<meta name="pt-build" content="20261111171051">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -201,7 +201,12 @@ table.st td.mono{white-space:nowrap}
 .bar{display:flex;gap:2px;width:100%} .bar i{flex:1;height:6px;border-radius:3px;background:var(--skip-bg)}
 .bar i.b-o,.bar i.b-g,.bar i.b-r{background:var(--accent)}
 .tick{width:24px;height:24px;border-radius:50%;background:#1e8e3e;color:#fff;font-style:normal;font-weight:800;font-size:15px;line-height:24px;text-align:center;align-self:center}
-.gear.sg{position:static;width:36px;height:36px} .gear.sg svg{width:20px;height:20px}
+/* a speciality row opens downwards inside the same box, like a project card (his word 2026-11-11) */
+.spbox{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.spbox.on{border-color:var(--ink)}
+.spbox .cdoc.spt{border:0;border-radius:0;width:100%;background:transparent}
+.spbox.on .cdoc.spt{padding-right:56px}
+.spbody{border-top:1px solid var(--line);padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px}
 .sgset{display:flex;align-items:flex-end;gap:8px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--sunk)} .sgset .f{flex:1;min-width:0}
 .trash{width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;flex:none}
 .tick.off{background:transparent;border:2px solid var(--line);box-sizing:border-box}
@@ -1156,21 +1161,23 @@ function editor(id,p,today){
   h+=`${foldOpenTag("specs",id)}<summary><span>${tick(allDone)}Специалности</span></summary><div class="cdocs sp1">`;
   {const on=ssel&&ssel.i==="arch",an=Math.min(...keys.map(k=>ARCH_ORDER.indexOf(archOf(p,k).stage||"not")));
     const line=keys.map(k=>{const a=archOf(p,k);return(keys.length>1?plotLabel(k)+": ":"")+ARCH_TEXT[a.stage||"not"]+(a.wait?" · чакаме "+(ARCH_WAIT.find(x=>x[0]===a.wait)||["",""])[1]:"")}).join(", ");
-    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="arch" aria-pressed="${!!on}">${tick(archDone)}<span class="snm"><b>Архитектура</b><span>${esc(line)}${p.architect?" · "+esc(p.architect):""}</span></span>${bar(an,3)}</button>`;
-    if(on){h+=`<div class="cedit"><div class="arch">`;
+    h+=`<div class="spbox${on?" on":""}"><button class="cdoc spt" data-ssel="arch" aria-pressed="${!!on}">${tick(archDone)}<span class="snm"><b>Архитектура</b><span>${esc(line)}${p.architect?" · "+esc(p.architect):""}</span></span>${bar(an,3)}</button>`;
+    if(on){h+=`<div class="spbody"><div class="arch">`;
       keys.forEach(k=>{const a=archOf(p,k),pk=esc(id)+"-"+esc(k);
         h+=`<div class="archc" data-arch="${esc(k)}">${keys.length>1?`<div class="ttl">${esc(plotLabel(k))}</div>`:""}
           <label class="f wide">Етап<select id="as-${pk}" data-ak="stage"${ro}>${opt(ARCH_STAGES,a.stage||"not")}</select></label>
           <label class="f wide">Чакаме<select id="aw-${pk}" data-ak="wait"${ro}>${opt(ARCH_WAIT,a.wait||"")}</select></label>
           <label class="f wide">Бележка<input type="text" id="an-${pk}" data-ak="what" value="${esc(a.what)}"${ro}></label>
         </div>`});
-      h+=`</div></div>`}}
+      h+=`</div></div>`}
+    h+=`</div>`}
   (p.specs||[]).forEach((s,i)=>{const on=ssel&&ssel.i===i,per=s.eng&&people[s.eng];
     const late=s.due&&s.due<today&&keys.some(k=>((s.by||{})[k]||"not")==="sent");
     const org=AP_ORG[s.name],sn=Math.min(...keys.map(k=>SPEC_STEP[(s.by||{})[k]||"not"])),an=org?Math.min(...keys.map(k=>AP_STEP[((s.ap||{})[k])||"not"])):0;
-    h+=`<button class="cdoc spt${on?" sel":""}" data-ssel="${i}" aria-pressed="${!!on}">${tick(sn===3)}<span class="snm"><b>${esc(s.name)}</b><span>${esc(specLine(s,keys))}${late?` · <span class="late">закъснява</span>`:""}${per?" · "+esc(per.name||""):""}</span></span>
+    h+=`<div class="spbox${on?" on":""}"><button class="cdoc spt" data-ssel="${i}" aria-pressed="${!!on}">${tick(sn===3)}<span class="snm"><b>${esc(s.name)}</b><span>${esc(specLine(s,keys))}${late?` · <span class="late">закъснява</span>`:""}${per?" · "+esc(per.name||""):""}</span></span>
       ${bar(sn,3)}${org&&sn===3?`<span class="apl">${esc(org)}</span>${bar(an,3)}`:""}</button>`;
-    if(on)h+=specEditor(id,p,i,keys,today,ro)});
+    if(on)h+=specEditor(id,p,i,keys,today,ro);
+    h+=`</div>`});
   if(canWrite)h+=`<span class="cadd"><input type="text" id="ns-${esc(id)}" placeholder="друга специалност"><button data-addspec="1" aria-label="Добави специалност">+</button></span>`;
   h+=`</div>`;
   if(canWrite){const ex=EXTRA_SPECS.filter(n=>!(p.specs||[]).some(s=>s.name===n));
@@ -1178,8 +1185,7 @@ function editor(id,p,today){
   h+=`</details>`;
   function specEditor(id,p,i,keys,today,ro){const s=p.specs[i],per=s.eng&&people[s.eng],sp=esc(id)+"-s"+i;
     const late=s.due&&s.due<today&&keys.some(k=>((s.by||{})[k]||"not")==="sent");
-    return`<div class="cedit">
-      <div class="row end"><div class="ttl">${esc(s.name)}</div><button class="gear sg" data-sgear="1" aria-label="Настройки" aria-pressed="${sgear}">${ICON_GEAR}</button></div>
+    return`<button class="gear" data-sgear="1" aria-label="Настройки" aria-pressed="${sgear}">${ICON_GEAR}</button><div class="spbody">
       ${sgear?`<div class="sgset"><label class="f">Инженер<select id="se-${sp}" data-si="${i}" data-sk="eng"${ro}>${engOptions(s)}</select></label>${canWrite?`<button class="ghost danger trash" data-delspec="${i}" aria-label="Изтрий специалността">${ICON_TRASH}</button>`:""}</div>`:""}
       <div class="cgrid">
         ${keys.map(k=>`<label class="f wh">${keys.length>1?esc(plotLabel(k)):"Състояние"}<select id="sst-${sp}-${esc(k)}" data-sstate="${i}|${esc(k)}"${ro}>${opt(Object.entries(SPEC_TEXT),(s.by||{})[k]||"not")}</select></label>`).join("")}

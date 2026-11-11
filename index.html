@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111160349">
+<meta name="pt-build" content="20261111161303">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -349,7 +349,7 @@ const OLD_NAMES={rosv:"РОСВ — скица и ситуация (копия, 
 const COMMON=["Нотариален акт","Скица-виза","ПУП","Пълномощно"];
 const MOVED_TO_COMMON={"Нотариален акт":"Нотариален акт","Скица (на името на собственика)":"Скица-виза","Виза за проектиране":"Скица-виза","Пълномощно от собственика":"Пълномощно"};
 /* where a paper must be approved: ticks inside the paper, stored in the approval steps themselves (one truth) */
-const COMMON_STEPS={"Скица-виза":["vik_visa","ep_visa"]};
+const COMMON_STEPS={"Скица-виза":["vik_visa","ep_visa","rosv"]};
 const DOCS=["ВиК — изходни данни","ВиК — съгласувана виза","Енерго Про — становище","Енерго Про — съгласувана виза","Геоложки доклад","Геодезическо заснемане","Ситуация","Проект (всички части)","Доклад за ЕЕ (оценка на съответствието)","Доклад за съответствие","Разрешение за строеж"];
 const WHERE=["при нас","при клиента","в надзора","в общината","ВиК","Енерго Про","РИОСВ","Кадастър","у проектанта"];
 /* one field for a paper (his word 2026-11-11: „тези могат да бъдат едно"): the place, or „не е налично" (have:"no") */

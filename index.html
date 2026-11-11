@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111171302">
+<meta name="pt-build" content="20261111171848">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -177,12 +177,13 @@ table.st td.mono{white-space:nowrap}
 .sc.h-orig{background:var(--ok-bg);color:var(--ok)} .sc.h-copy{background:var(--accent-bg);color:var(--accent)}
 .sc span{display:block}
 /* the project's own papers: one row of tiles on top of the opened project */
-.cpanel,.fold{display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--line)}
-.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);font-weight:600;font-size:15px;-webkit-user-select:none;user-select:none}
+.cpanel,.fold{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:0;border-radius:0;background:var(--surface);transition:background .15s;font-weight:600;font-size:15px;-webkit-user-select:none;user-select:none}
 .fold>summary::-webkit-details-marker{display:none}
 .fold>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:-4px 4px 0 0;transition:transform .15s}
 .fold[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
-.fold:not([open]){padding-bottom:0;border-bottom:0}
+.fold[open]{border-color:var(--ink);padding-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.07)} .fold[open]>summary{background:var(--sunk);border-bottom:1px solid var(--line)}
+.fold>summary:active{background:var(--line)} .fold>:not(summary){margin:0 12px} .fold[open]>summary+*{margin-top:4px}
 .cdocs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
 @media (max-width:600px){.cdocs{grid-template-columns:repeat(2,1fr)}}
 .cdoc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid transparent;font-size:12px;line-height:1.3;min-width:0}

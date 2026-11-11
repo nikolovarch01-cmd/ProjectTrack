@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111154106">
+<meta name="pt-build" content="20261111154303">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -191,7 +191,8 @@ table.st td.mono{white-space:nowrap}
 .cedit .ttl{font-weight:600}
 .cedit .ttl span{font-family:var(--f-mono);font-weight:500;background:var(--sunk);border-radius:6px;padding:1px 6px;margin-right:6px}
 .cgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-@media (max-width:760px){.cgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cgrid .nt{grid-column:span 2}
+@media (max-width:760px){.cgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.cgrid .pl{grid-column:span 2}.cgrid .nt{grid-column:auto}}
 .term{display:flex;gap:4px}
 .term input{width:60px}
 .rem{display:flex;flex-direction:column;gap:4px}
@@ -1144,9 +1145,9 @@ function commonPanel(id,p,ro){
       <div class="row end"><div class="ttl">${esc(c.name)}</div><span>${canWrite?`<button class="ghost danger" data-delcommon="${csel.i}">Махни</button>`:""}<button class="ghost" data-cclose="1">Затвори</button></span></div>
       ${filesBlock(c.files,ro,"common")}${commonApprovals(p,c)}
       <div class="cgrid">
-        <label class="f">Къде${placeSelect("cw-"+pid,"data-cc",c,ro)}</label>
+        <label class="f pl">Къде${placeSelect("cw-"+pid,"data-cc",c,ro)}</label>
         <label class="f">От дата<input type="date" id="cd-${pid}" data-cc="date" value="${esc(c.date)}"${ro}></label>
-        <label class="f" style="grid-column:span 2">Бележка<input type="text" id="cn-${pid}" data-cc="note" value="${esc(c.note)}"${ro}></label>
+        <label class="f nt">Бележка<input type="text" id="cn-${pid}" data-cc="note" value="${esc(c.note)}"${ro}></label>
       </div>
     </div>`}
   return h+`</div>`;
@@ -1167,9 +1168,9 @@ function docsSection(id,p,keys,ro){
     h+=`<div class="cedit" style="margin-top:10px" data-doc="${dsel.i}" data-k="${esc(dsel.k)}">
       <div class="row end"><div class="ttl"><span>${esc(plotLabel(dsel.k))}</span>${esc(d.name)}</div><button class="ghost" data-dclose="1">Затвори</button></div>
       <div class="cgrid">
-        <label class="f">Къде${placeSelect("dw-"+pid,"data-dc",c,ro)}</label>
+        <label class="f pl">Къде${placeSelect("dw-"+pid,"data-dc",c,ro)}</label>
         <label class="f">От дата<input type="date" id="dd-${pid}" data-dc="date" value="${esc(c.date)}"${ro}></label>
-        <label class="f" style="grid-column:span 2">Бележка<input type="text" id="dn-${pid}" data-dc="note" value="${esc(c.note)}"${ro}></label>
+        <label class="f nt">Бележка<input type="text" id="dn-${pid}" data-dc="note" value="${esc(c.note)}"${ro}></label>
       </div>
       ${filesBlock(c.files,ro,"doc")}
     </div>`}

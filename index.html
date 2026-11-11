@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ProjectTrack">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="pt-build" content="20261111161303">
+<meta name="pt-build" content="20261111163304">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
@@ -321,7 +321,9 @@ const SPEC_TEXT={not:"не е подадена",sent:"при инженера",b
 const CELL_NEXT={not:"sent",sent:"back",back:"ready",ready:"not"};
 const CELL_MARK={not:"",sent:"→",back:"?",ready:"✓"};
 /* architecture (our own part) per plot: how far we are, and whom we wait for (his ask, 2026-11-10) */
-const ARCH_STAGES=[["not","Не е почната"],["data","Събираме данни"],["idea","Идеен проект — работим"],["idea_done","Идеен проект — готов"],["tech","Технически проект — работим"],["ready","Готова за съгласуване"],["work","Работен проект"]];
+/* his four (2026-11-11): не е започнат, работа по идеен, работа по технически, завършен */
+const ARCH_STAGES=[["not","Не е започнат"],["idea","Работа по идеен"],["tech","Работа по технически"],["ready","Завършен"]];
+const ARCH_OLD={data:"not",idea_done:"tech",work:"ready"};
 const ARCH_TEXT=Object.fromEntries(ARCH_STAGES);
 const ARCH_ORDER=ARCH_STAGES.map(x=>x[0]);
 const ARCH_WAIT=[["","никого — работим"],["client","клиента"],["spec","специалност"],["other","друго"]];
@@ -391,6 +393,7 @@ function normalize(p){
     const a=p.specs.find(s=>s.name==="Архитектура");
     if(a)Object.keys(a.by||{}).forEach(k=>{p.arch[k]={stage:a.by[k]==="ready"?"ready":"idea",wait:"",what:"",since:"",note:""}});
   }
+  Object.values(p.arch).forEach(a=>{if(a&&ARCH_OLD[a.stage])a.stage=ARCH_OLD[a.stage]});
   p.specs=p.specs.filter(s=>s.name!=="Архитектура");
   p.steps=(p.steps||[]).map(s=>{
     const t=TEMPLATE.find(x=>x.key===s.key);
@@ -1100,9 +1103,8 @@ function editor(id,p,today){
     h+=`<div class="archc" data-arch="${esc(k)}"><div class="ttl">${esc(plotLabel(k))}</div>
       <div class="stage">${ARCH_ORDER.slice(1).map((x,j)=>`<i class="${j<ai?"on":""}" title="${esc(ARCH_TEXT[x])}"></i>`).join("")}</div>
       <label class="f wide">Етап<select id="as-${pk}" data-ak="stage"${ro}>${opt(ARCH_STAGES,a.stage||"not")}</select></label>
-      <label class="f">Чакаме<select id="aw-${pk}" data-ak="wait"${ro}>${opt(ARCH_WAIT,a.wait||"")}</select></label>
-      <label class="f">От дата<input type="date" id="ad-${pk}" data-ak="since" value="${esc(a.since)}"${ro}></label>
-      <label class="f wide">Какво чакаме / бележка<input type="text" id="an-${pk}" data-ak="what" value="${esc(a.what)}" placeholder="напр. одобрение на идейния, данни от геодезист"${ro}></label>
+      <label class="f wide">Чакаме<select id="aw-${pk}" data-ak="wait"${ro}>${opt(ARCH_WAIT,a.wait||"")}</select></label>
+      <label class="f wide">Бележка<input type="text" id="an-${pk}" data-ak="what" value="${esc(a.what)}"${ro}></label>
     </div>`});
   h+=`</div></div>`;
   h+=`<div><h2 style="margin-bottom:6px">Специалности</h2><div class="mx-wrap"><table class="mx"><thead><tr><th class="sn"></th>`;
